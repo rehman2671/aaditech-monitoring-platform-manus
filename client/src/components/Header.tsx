@@ -64,6 +64,28 @@ export default function Header({ onSearchChange, searchQuery, isLiveStreaming, o
           <Radio className={`w-3.5 h-3.5 ${isLiveStreaming ? 'animate-pulse text-emerald-400' : 'text-slate-400'}`} />
           <span>{isLiveStreaming ? 'Live Stream Active' : 'Stream Paused'}</span>
         </button>
+        <div className="flex items-center gap-2 border-r border-slate-800 pr-3 mr-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => toast.success('Fleet Report Generated', { description: 'CSV export of 5 endpoints is downloading.' })}
+            className="bg-slate-800/40 border-slate-800 text-slate-400 hover:text-white h-8 text-[10px] uppercase font-bold tracking-wider"
+          >
+            CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => toast.promise(new Promise(r => setTimeout(r, 1500)), {
+              loading: 'Generating PDF diagnostic report...',
+              success: 'PDF Report Ready',
+              error: 'Report generation failed',
+            })}
+            className="bg-slate-800/40 border-slate-800 text-slate-400 hover:text-white h-8 text-[10px] uppercase font-bold tracking-wider"
+          >
+            PDF
+          </Button>
+        </div>
         <Button variant="outline" size="sm" onClick={handleRefreshClick} disabled={isRefreshing} className="bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:text-white h-9 text-xs gap-2">
           <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-blue-400' : ''}`} />
           <span>{isRefreshing ? 'Polling...' : 'Refresh All'}</span>

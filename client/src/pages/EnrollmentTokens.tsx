@@ -27,17 +27,36 @@ export default function EnrollmentTokens({ tokens, onCreateToken, canWrite }: En
           <h2 className="text-2xl font-extrabold text-white tracking-tight">Agent Enrollment Tokens</h2>
           <p className="text-sm text-slate-400 mt-1">Secure enrollment tokens used by Windows background agents during initial registration.</p>
         </div>
-        <Button
-          disabled={!canWrite}
-          onClick={() => {
-            onCreateToken();
-            if (canWrite) toast.success('New enrollment token generated successfully');
-          }}
-          title={canWrite ? 'Generate enrollment token' : 'Admin role required'}
-          className="bg-blue-600 hover:bg-blue-500 text-white font-semibold gap-2 shadow-lg shadow-blue-600/20 disabled:opacity-50"
-        >
-          <Plus className="w-4 h-4" /> {canWrite ? 'Generate New Token' : 'Admin Role Required'}
-        </Button>
+        <div className="flex items-center gap-3">
+          <select className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono outline-none focus:border-blue-500">
+            <option value="v2.4.1">Agent v2.4.1 (LTS)</option>
+            <option value="v2.5.0">Agent v2.5.0 (Beta)</option>
+          </select>
+          <Button
+            disabled={!canWrite}
+            onClick={() => {
+              toast.promise(new Promise(r => setTimeout(r, 2000)), {
+                loading: 'Compiling versioned MSI package...',
+                success: 'MSI Build Ready: sentinelpulse-agent-v2.4.1.msi',
+                error: 'Build pipeline failed',
+              });
+            }}
+            className="bg-slate-800 hover:bg-slate-700 text-white font-semibold gap-2 border border-slate-700"
+          >
+            Build & Download MSI
+          </Button>
+          <Button
+            disabled={!canWrite}
+            onClick={() => {
+              onCreateToken();
+              if (canWrite) toast.success('New enrollment token generated successfully');
+            }}
+            title={canWrite ? 'Generate enrollment token' : 'Admin role required'}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold gap-2 shadow-lg shadow-blue-600/20 disabled:opacity-50"
+          >
+            <Plus className="w-4 h-4" /> {canWrite ? 'New Token' : 'Admin Required'}
+          </Button>
+        </div>
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
