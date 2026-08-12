@@ -133,6 +133,49 @@ func TestPersistentAuditRepositoryWithMockDB(t *testing.T) {
 	}
 }
 
+func TestEndpointRepositoryNilDB(t *testing.T) {
+	repo := NewEndpointRepository(nil)
+	err := repo.UpsertEndpoint(EndpointModel{ID: "ep-1"})
+	if err == nil {
+		t.Error("Expected error when upserting with nil database connection")
+	}
+
+	_, err = repo.ListEndpoints("org-1")
+	if err == nil {
+		t.Error("Expected error when listing endpoints with nil database connection")
+	}
+}
+
+func TestTokenRepositoryNilDB(t *testing.T) {
+	repo := NewTokenRepository(nil)
+	_, err := repo.CreateToken("org-1", "secret-token", time.Hour)
+	if err == nil {
+		t.Error("Expected error when creating token with nil database connection")
+	}
+
+	_, err = repo.ConsumeAndRegisterEndpoint("secret-token", "ep-1", "host1", "sn1")
+	if err == nil {
+		t.Error("Expected error when consuming token with nil database connection")
+	}
+}
+
+func TestTokenHashingDeterminism(t *testing.T) {
+	raw := "sp_enrol_secret123"
+	h1 := HashEnrollmentToken(raw)
+	h2 := HashEnrollmentToken(raw)
+	if h1 != h2 || len(h1) != 64 {
+		t.Errorf("Expected deterministic 64-char sha256 hash, got %s and %s", h1, h2)
+	}
+}
+
+func TestMigratorNilDB(t *testing.T) {
+	migrator := NewMigrator(nil, "./migrations")
+	err := migrator.Up()
+	if err == nil {
+		t.Error("Expected error when running migrator with nil database connection")
+	}
+}
+
 func TestProductionFailClosedStartupLogic(t *testing.T) {
 	_ = os.Setenv("ENV", "production")
 	_ = os.Setenv("JWT_SECRET", "")

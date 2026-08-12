@@ -2,7 +2,7 @@
 
 - [x] Phase 0: Architecture Freeze & Documentation (`docs/ARCHITECTURE.md`, `docs/SECURITY_MODEL.md`, `docs/AGENT_PROTOCOL.md`, `docs/DATA_MODEL.md`, `docs/DEPLOYMENT.md`, `docs/THREAT_MODEL.md`)
 - [x] Phase 1: Canonical Go Backend & Security Boundary (API routing, auth, RBAC, tenant context middleware, audit log, unit tests)
-- [ ] Phase 2: PostgreSQL & TimescaleDB Migration (Relational tables, hypertables, token hashing, migration runner)
+- [x] Phase 2: PostgreSQL & TimescaleDB Migration (Relational tables, hypertables, token hashing, migration runner)
 - [ ] Phase 3: Redis Streams & Workers (Producer, consumer group, persistence worker, alert rules, heartbeat checks)
 - [ ] Phase 4: Real .NET Agent & Offline Buffer (WMI/CIM collectors, DPAPI encryption, SQLite offline queue, retry backoff, WiX MSI)
 - [ ] Phase 5: Dashboard Integration (Remove preview fallbacks, connect UI to canonical Go API, secure realtime and exports)
@@ -20,3 +20,8 @@
 - [x] Phase 1 Subtask: Write Go integration tests for live PostgreSQL audit log persistence and startup failure handling
 - [ ] Phase 1 Subtask: Add live PostgreSQL integration tests for PersistentAuditRepository insert/read
 - [ ] Phase 1 Subtask: Add test coverage for production fail-closed startup behavior when database is unreachable
+- [x] Phase 2 Subtask: Implement Go database migration runner for SQL migration files
+- [x] Phase 2 Subtask: Implement secure enrollment token hashing and database persistence repository
+- [x] Phase 2 Subtask: Add PostgreSQL/TimescaleDB integration tests for hypertable writes and endpoint repositories
+- [x] Phase 2 Subtask: Implement Go SQL migration runner module with filesystem discovery and execution
+- [ ] Phase 2 Subtask: Add live PostgreSQL integration test suite for token creation, consumption, and hypertable inserts
