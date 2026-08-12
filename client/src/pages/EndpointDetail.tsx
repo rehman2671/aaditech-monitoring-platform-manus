@@ -26,7 +26,7 @@ import ExtendedTelemetryPanel from '@/components/ExtendedTelemetryPanel';
 
 interface EndpointDetailProps {
   endpoints: Endpoint[];
-  onTriggerOnDemandRefresh: (endpointId: string) => void;
+  onTriggerOnDemandRefresh: (endpointId: string) => void | Promise<void>;
 }
 
 export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: EndpointDetailProps) {
@@ -36,15 +36,18 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
   const endpoint = endpoints.find(e => e.id === endpointId) || endpoints[0];
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const handleOnDemandClick = () => {
+  const handleOnDemandClick = async () => {
     setIsRefreshing(true);
-    onTriggerOnDemandRefresh(endpoint.id);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      toast.success(`On-Demand Collection Complete`, {
-        description: `WMI / CIM agents on ${endpoint.hostname} pushed fresh telemetry successfully.`
+    try {
+      await Promise.resolve(onTriggerOnDemandRefresh(endpoint.id));
+      toast.success('On-Demand Collection Queued', {
+        description: `The backend will request fresh telemetry from ${endpoint.hostname}.`
       });
-    }, 1500);
+    } catch (error) {
+      toast.error('Unable to queue collection', { description: error instanceof Error ? error.message : 'Request failed' });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   if (!endpoint) {

@@ -45,3 +45,8 @@
 - [ ] Phase 4 Subtask: Implement explicit enrollment flow preventing unauthenticated pending telemetry
 - [x] Phase 4 Subtask: Run agent build validation and add SQLite offline buffer test coverage
 - [ ] Phase 4 Subtask: Execute dotnet build and dotnet test (Blocked: requires Windows/.NET SDK container environment)
+- [x] Phase 5 Subtask: Audit and remove remaining mock/preview telemetry fallbacks
+- [x] Phase 5 Subtask: Connect dashboard fleet, endpoint, alert, and report views to canonical authenticated data
+- [x] Phase 5 Subtask: Validate realtime SSE telemetry and alert acknowledgement/error states
+- [x] Phase 5 Subtask: Add frontend/backend integration tests for secure tenant-scoped dashboard data
+- [x] Phase 5 Subtask: Persist alert-rule toggles and expose authenticated dashboard refresh command

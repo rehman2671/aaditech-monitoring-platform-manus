@@ -16,17 +16,11 @@ import EnrollmentTokens from './pages/EnrollmentTokens';
 import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
 import NotFound from './pages/NotFound';
-import { initialEndpoints, initialAlertRules, initialSystemAlerts, initialEnrollmentTokens } from './mockData';
 import type { AuthSession, Endpoint, AlertRule, SystemAlert, EnrollmentToken, RealtimeEvent } from './types';
 import { toast } from 'sonner';
 import { SseRealtimeClient } from '@/lib/sseRealtime';
 
 /** Precision Enterprise Glass: persistent control shell, typed transport seams, and role-aware operator actions. */
-const previewSession: AuthSession = {
-  accessToken: 'preview-session-token',
-  expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
-  user: { id: 'preview-admin', email: 'ops.admin@enterprise.local', role: 'admin', organizationId: 'org-enterprise-01' },
-};
 export default function App() {
   const [location, navigate] = useLocation();
   const auth = useAuth({ redirectOnUnauthenticated: false });
@@ -34,16 +28,27 @@ export default function App() {
   const alertRulesQuery = trpc.monitoring.alertRules.useQuery(undefined, { enabled: Boolean(auth.user), retry: false });
   const systemAlertsQuery = trpc.monitoring.systemAlerts.useQuery(undefined, { enabled: Boolean(auth.user), retry: false });
   const tokenQuery = trpc.monitoring.enrollmentTokens.useQuery(undefined, { enabled: Boolean(auth.user), retry: false });
-  const acknowledgeMutation = trpc.monitoring.acknowledgeAlert.useMutation();
-  const generateTokenMutation = trpc.monitoring.generateToken.useMutation();
-  const [session, setSession] = useState<AuthSession | null>(() => {
-    const stored = sessionStorage.getItem('sentinelpulse.session');
-    return stored ? JSON.parse(stored) as AuthSession : previewSession;
+  const trpcUtils = trpc.useUtils();
+  const acknowledgeMutation = trpc.monitoring.acknowledgeAlert.useMutation({
+    onSuccess: () => { void trpcUtils.monitoring.systemAlerts.invalidate(); },
+    onError: error => toast.error('Alert acknowledgement failed', { description: error.message }),
   });
-  const [endpoints, setEndpoints] = useState<Endpoint[]>(initialEndpoints);
-  const [alertRules, setAlertRules] = useState<AlertRule[]>(initialAlertRules);
-  const [systemAlerts, setSystemAlerts] = useState<SystemAlert[]>(initialSystemAlerts);
-  const [tokens, setTokens] = useState<EnrollmentToken[]>(initialEnrollmentTokens);
+  const generateTokenMutation = trpc.monitoring.generateToken.useMutation({
+    onSuccess: () => { void trpcUtils.monitoring.enrollmentTokens.invalidate(); },
+    onError: error => toast.error('Enrollment token generation failed', { description: error.message }),
+  });
+  const setAlertRuleEnabledMutation = trpc.monitoring.setAlertRuleEnabled.useMutation({
+    onSuccess: () => { void trpcUtils.monitoring.alertRules.invalidate(); },
+    onError: error => toast.error('Alert rule update failed', { description: error.message }),
+  });
+  const requestRefreshMutation = trpc.monitoring.requestRefresh.useMutation({
+    onError: error => toast.error('Refresh request failed', { description: error.message }),
+  });
+  const [session, setSession] = useState<AuthSession | null>(null);
+  const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
+  const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
+  const [systemAlerts, setSystemAlerts] = useState<SystemAlert[]>([]);
+  const [tokens, setTokens] = useState<EnrollmentToken[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLiveStreaming, setIsLiveStreaming] = useState(true);
 
@@ -56,16 +61,16 @@ export default function App() {
         id: String(auth.user.id),
         email: auth.user.email ?? 'operator@enterprise.local',
         role: auth.user.role === 'admin' ? 'admin' : 'viewer',
-        organizationId: 'org-enterprise-01',
+        organizationId: String((auth.user as unknown as { organizationId?: string }).organizationId ?? auth.user.id),
       },
     };
     setSession(nextSession);
   }, [auth.user]);
 
   useEffect(() => {
-    if (!endpointQuery.data?.length) return;
+    if (!endpointQuery.data) return;
     setEndpoints(prev => endpointQuery.data.map(record => {
-      const fallback = prev.find(endpoint => endpoint.id === record.id) ?? prev[0];
+      const fallback = prev.find(endpoint => endpoint.id === record.id);
       const mappedStatus = record.status === 'pending' ? 'warning' : record.status === 'disabled' ? 'offline' : record.status;
       return {
         ...fallback,
@@ -73,18 +78,28 @@ export default function App() {
         organizationId: record.organizationId,
         hostname: record.hostname,
         serialNumber: record.serialNumber,
-        osVersion: record.osVersion ?? fallback.osVersion,
-        osBuild: record.osBuild ?? fallback.osBuild,
-        domainOrWorkgroup: record.domainOrWorkgroup ?? fallback.domainOrWorkgroup,
-        agentVersion: record.agentVersion ?? fallback.agentVersion,
+        ipAddress: fallback?.ipAddress ?? '',
+        macAddress: fallback?.macAddress ?? '',
+        osVersion: record.osVersion ?? fallback?.osVersion ?? 'Unknown',
+        osBuild: record.osBuild ?? fallback?.osBuild ?? 'Unknown',
+        domainOrWorkgroup: record.domainOrWorkgroup ?? fallback?.domainOrWorkgroup ?? 'Unknown',
+        agentVersion: record.agentVersion ?? fallback?.agentVersion ?? 'Unknown',
         status: mappedStatus,
         lastSeenAt: new Date(record.lastSeenAt).toISOString(),
+        createdAt: record.createdAt ? new Date(record.createdAt).toISOString() : fallback?.createdAt ?? new Date().toISOString(),
+        hardware: fallback?.hardware ?? { cpuModel: 'Unknown', cpuCores: 0, cpuLogicalProcessors: 0, gpuModel: 'Unknown', ramTotalMb: 0, motherboardModel: 'Unknown', biosVersion: 'Unknown' },
+        disks: fallback?.disks ?? [],
+        osHealth: fallback?.osHealth ?? { osVersion: record.osVersion ?? 'Unknown', osBuild: record.osBuild ?? 'Unknown', dismStatus: 'Healthy', sfcStatus: 'No Integrity Violations', driverIssuesCount: 0, reliabilityScore: 0 },
+        software: fallback?.software ?? [],
+        processes: fallback?.processes ?? [],
+        eventLogs: fallback?.eventLogs ?? [],
+        metricsHistory: fallback?.metricsHistory ?? [],
       };
     }));
   }, [endpointQuery.data]);
 
   useEffect(() => {
-    if (!alertRulesQuery.data?.length) return;
+    if (!alertRulesQuery.data) return;
     setAlertRules(alertRulesQuery.data.map(record => ({
       id: record.id,
       name: record.name,
@@ -98,7 +113,7 @@ export default function App() {
   }, [alertRulesQuery.data]);
 
   useEffect(() => {
-    if (!systemAlertsQuery.data?.length) return;
+    if (!systemAlertsQuery.data) return;
     setSystemAlerts(systemAlertsQuery.data.map(record => ({
       id: record.id,
       endpointId: record.endpointId,
@@ -112,7 +127,7 @@ export default function App() {
   }, [systemAlertsQuery.data]);
 
   useEffect(() => {
-    if (!tokenQuery.data?.length) return;
+    if (!tokenQuery.data) return;
     setTokens(tokenQuery.data.map(record => ({
       id: record.id,
       tokenHash: record.tokenHash,
@@ -129,30 +144,14 @@ export default function App() {
 
   const signIn = (nextSession: AuthSession) => {
     setSession(nextSession);
-    sessionStorage.setItem('sentinelpulse.session', JSON.stringify(nextSession));
     navigate('/');
   };
 
   const signOut = () => {
+    void auth.logout();
     setSession(null);
-    sessionStorage.removeItem('sentinelpulse.session');
     navigate('/login');
   };
-
-  useEffect(() => {
-    if (!isLiveStreaming || !session) return;
-    const interval = setInterval(() => {
-      setEndpoints(prev => prev.map(ep => {
-        if (ep.status === 'offline') return ep;
-        const randomCpu = Math.floor(Math.random() * 35) + 15;
-        const randomRam = Math.floor(Math.random() * 5) + 55;
-        const newTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const updatedHistory = [...ep.metricsHistory.slice(1), { timestamp: newTime, cpu: randomCpu, ram: randomRam, diskIO: Math.floor(Math.random() * 20) }];
-        return { ...ep, metricsHistory: updatedHistory, lastSeenAt: new Date().toISOString() };
-      }));
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [isLiveStreaming, session]);
 
   const handleRealtimeEvent = (event: RealtimeEvent) => {
     if (event.type === 'endpoint_status_changed') {
@@ -181,8 +180,7 @@ export default function App() {
       toast.error('Viewer role is read-only', { description: 'Ask an admin to acknowledge system alerts.' });
       return;
     }
-    if (auth.user) void acknowledgeMutation.mutateAsync({ alertId });
-    setSystemAlerts(prev => prev.map(a => a.id === alertId ? { ...a, acknowledged: true } : a));
+    void acknowledgeMutation.mutateAsync({ alertId });
   };
 
   const handleToggleRule = (ruleId: string) => {
@@ -190,7 +188,9 @@ export default function App() {
       toast.error('Admin role required', { description: 'Only admins can change threshold rules.' });
       return;
     }
-    setAlertRules(prev => prev.map(r => r.id === ruleId ? { ...r, enabled: !r.enabled } : r));
+    const rule = alertRules.find(candidate => candidate.id === ruleId);
+    if (!rule) return;
+    void setAlertRuleEnabledMutation.mutateAsync({ ruleId, enabled: !rule.enabled });
   };
 
   const handleCreateToken = () => {
@@ -198,30 +198,18 @@ export default function App() {
       toast.error('Admin role required', { description: 'Only admins can issue enrollment tokens.' });
       return;
     }
-    const newToken: EnrollmentToken = {
-      id: `tok-${Math.random().toString(36).substring(2, 6)}-uuid`,
-      tokenHash: `sha256:${Math.random().toString(36).substring(2)}`,
-      plainToken: `sp_enrol_${crypto.randomUUID().replaceAll('-', '')}`,
-      expiresAt: new Date(Date.now() + 86400000).toISOString(),
-      usedByEndpointId: null,
-      createdAt: new Date().toISOString()
-    };
-    if (auth.user) void generateTokenMutation.mutateAsync();
-    setTokens(prev => [newToken, ...prev]);
+    void generateTokenMutation.mutateAsync();
   };
 
-  const handleTriggerGlobalRefresh = () => toast.info('Refresh request broadcast to all online agents');
-  const handleTriggerOnDemandRefresh = (endpointId: string) => setEndpoints(prev => prev.map(ep => ep.id === endpointId ? { ...ep, lastSeenAt: new Date().toISOString() } : ep));
+  const handleTriggerGlobalRefresh = async () => {
+    await requestRefreshMutation.mutateAsync({ endpointId: undefined, modules: ['performance', 'hardware', 'os_health'] });
+  };
+  const handleTriggerOnDemandRefresh = async (endpointId: string) => {
+    await requestRefreshMutation.mutateAsync({ endpointId, modules: ['performance', 'hardware', 'os_health', 'event_logs'] });
+  };
 
   const exportFleet = () => {
-    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), organizationId: session?.user.organizationId, endpoints }, null, 2)], { type: 'application/json' });
-    const href = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = href;
-    anchor.download = `sentinelpulse-endpoints-${new Date().toISOString().slice(0, 10)}.json`;
-    anchor.click();
-    URL.revokeObjectURL(href);
-    toast.success('Fleet export downloaded', { description: 'This mirrors GET /api/v1/export/endpoints.' });
+    toast.info('Use CSV or PDF export from the authenticated report controls.');
   };
 
   const shell = useMemo(() => ({
@@ -254,7 +242,6 @@ export default function App() {
                 onTriggerGlobalRefresh={handleTriggerGlobalRefresh}
                 user={session.user}
                 onSignOut={signOut}
-                realtimeEventHandler={handleRealtimeEvent}
               />
               <div className="flex-1">
                 <Switch>

@@ -1,8 +1,8 @@
 import { FormEvent, useState } from 'react';
 import { Activity, ArrowRight, Eye, EyeOff, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { AuthSession, UserRole } from '../types';
-import { api, ApiError } from '../lib/api';
+import type { AuthSession } from '../types';
+import { api } from '../lib/api';
 import { toast } from 'sonner';
 
 /** Precision Enterprise Glass: a quiet, high-trust auth surface with node-and-pulse identity cues. */
@@ -13,7 +13,6 @@ interface LoginPageProps {
 export default function LoginPage({ onAuthenticated }: LoginPageProps) {
   const [email, setEmail] = useState('ops.admin@enterprise.local');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('admin');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -25,20 +24,9 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
       onAuthenticated(session);
       toast.success('Session established', { description: 'SentinelPulse command center is ready.' });
     } catch (error) {
-      // Static preview fallback: lets operators explore the full UI before the Dashboard API is connected.
-      if (error instanceof TypeError || error instanceof ApiError) {
-        onAuthenticated({
-          accessToken: 'preview-session-token',
-          expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
-          user: {
-            id: role === 'admin' ? 'preview-admin' : 'preview-viewer',
-            email,
-            role,
-            organizationId: 'org-enterprise-01',
-          },
-        });
-        toast.info('Preview session enabled', { description: 'Connect the Dashboard API to enforce production JWT authentication.' });
-      }
+      toast.error('Authentication failed', {
+        description: error instanceof Error ? error.message : 'The authentication service is unavailable.'
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -97,16 +85,6 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
                 </button>
               </div>
             </label>
-            <div className="space-y-2">
-              <span className="text-xs font-semibold text-slate-300">Preview role</span>
-              <div className="grid grid-cols-2 gap-2">
-                {(['admin', 'viewer'] as UserRole[]).map((candidate) => (
-                  <button key={candidate} type="button" onClick={() => setRole(candidate)} className={`rounded-xl border px-3 py-2 text-xs font-mono uppercase transition ${role === candidate ? 'border-blue-500 bg-blue-500/15 text-blue-300' : 'border-slate-800 text-slate-500 hover:text-slate-300'}`}>
-                    {candidate}
-                  </button>
-                ))}
-              </div>
-            </div>
             <Button disabled={isSubmitting} type="submit" className="w-full h-11 bg-blue-600 hover:bg-blue-500 text-white font-semibold gap-2 shadow-lg shadow-blue-600/20">
               {isSubmitting ? 'Authenticating...' : 'Enter SentinelPulse'}
               <ArrowRight className="w-4 h-4" />

@@ -36,3 +36,15 @@ describe("monitoring router", () => {
     expect(Array.isArray(endpoints)).toBe(true);
   });
 });
+
+  it("allows an admin to issue a tenant-scoped refresh request", async () => {
+    const caller = appRouter.createCaller(createMockContext('admin'));
+    const result = await caller.monitoring.requestRefresh({ modules: ['performance'] });
+    expect(result.success).toBe(true);
+    expect(result.requestId).toMatch(/[0-9a-f-]{36}/);
+  });
+
+  it("rejects refresh requests for viewer roles", async () => {
+    const caller = appRouter.createCaller(createMockContext('user'));
+    await expect(caller.monitoring.requestRefresh({ modules: ['performance'] })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });

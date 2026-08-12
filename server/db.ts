@@ -117,6 +117,18 @@ export async function getEnrollmentTokens(orgId = 'org-enterprise-01') {
   return db.select().from(enrollmentTokens).where(eq(enrollmentTokens.organizationId, orgId));
 }
 
+export async function acknowledgeSystemAlert(alertId: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database unavailable');
+  await db.update(systemAlerts).set({ acknowledged: true }).where(eq(systemAlerts.id, alertId));
+}
+
+export async function setAlertRuleEnabled(ruleId: string, enabled: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error('Database unavailable');
+  await db.update(alertRules).set({ enabled }).where(eq(alertRules.id, ruleId));
+}
+
 export async function recordEndpointHeartbeat(endpointId: string) {
   const db = await getDb();
   if (!db) return;

@@ -57,12 +57,17 @@ export interface ApiRequestEnvelope {
   payload: Record<string, unknown>;
 }
 
-export type RealtimeEvent =
-  | { type: 'endpoint_status_changed'; endpointId: string; status: EndpointStatus; lastSeenAt: string }
-  | { type: 'new_alert'; alert: AlertContract }
-  | { type: 'alert_resolved'; alertId: string; resolvedAt: string }
-  | { type: 'metrics_updated'; endpointId: string; capturedAt: string }
-  | { type: 'refresh_request'; modules: string[]; requestId: string };
+export type RealtimeEvent = ({
+  type: 'endpoint_status_changed'; endpointId: string; status: EndpointStatus; lastSeenAt: string
+} | {
+  type: 'new_alert'; alert: AlertContract
+} | {
+  type: 'alert_resolved'; alertId: string; resolvedAt: string
+} | {
+  type: 'metrics_updated'; endpointId: string; capturedAt: string
+} | {
+  type: 'refresh_request'; endpointId?: string; modules: string[]; requestId: string
+}) & { organizationId?: string };
 
 export interface DiskInfo {
   id: string;

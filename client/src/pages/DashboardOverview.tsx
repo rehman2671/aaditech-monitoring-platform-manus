@@ -32,15 +32,16 @@ export default function DashboardOverview({ endpoints, alerts, onAcknowledgeAler
 
   const unacknowledgedAlerts = alerts.filter(a => !a.acknowledged);
 
-  // Aggregate telemetry trend across endpoints
-  const trendData = [
-    { time: '10:00', cpuAvg: 26, ramAvg: 58, networkIO: 14.2 },
-    { time: '10:10', cpuAvg: 38, ramAvg: 61, networkIO: 22.4 },
-    { time: '10:20', cpuAvg: 28, ramAvg: 59, networkIO: 11.0 },
-    { time: '10:30', cpuAvg: 47, ramAvg: 67, networkIO: 34.8 },
-    { time: '10:40', cpuAvg: 35, ramAvg: 63, networkIO: 18.2 },
-    { time: '10:50', cpuAvg: 34, ramAvg: 62, networkIO: 16.5 },
-  ];
+  const trendData = Array.from({ length: 12 }, (_, index) => {
+    const points = endpoints.flatMap(endpoint => endpoint.metricsHistory.slice(-12)[index] ? [endpoint.metricsHistory.slice(-12)[index]] : []);
+    const cpuAvg = points.length ? points.reduce((sum, point) => sum + point.cpu, 0) / points.length : 0;
+    const ramAvg = points.length ? points.reduce((sum, point) => sum + point.ram, 0) / points.length : 0;
+    return {
+      time: points[0]?.timestamp ?? `T-${11 - index}`,
+      cpuAvg: Math.round(cpuAvg * 10) / 10,
+      ramAvg: Math.round(ramAvg * 10) / 10,
+    };
+  });
 
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">

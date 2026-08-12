@@ -2,13 +2,14 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
-import { getEndpoints, getAlertRules, getSystemAlerts, getEnrollmentTokens, getEndpointMetadata, getLatestBatteryTelemetry, getLatestNetworkTelemetry, getApplicationUsage, recordEndpointMetadata } from "./db";
+import { getEndpoints, getAlertRules, getSystemAlerts, getEnrollmentTokens, getEndpointMetadata, getLatestBatteryTelemetry, getLatestNetworkTelemetry, getApplicationUsage, recordEndpointMetadata, acknowledgeSystemAlert, setAlertRuleEnabled } from "./db";
 import { z } from "zod";
 import path from "path";
 import crypto from "crypto";
 import { TRPCError } from "@trpc/server";
 import { calculateHealthScore } from "./healthScore";
 import { buildVersionedMsi } from "./msiBuild";
+import { broadcastRealtimeEvent } from './realtime';
 
 async function getReportInputs() {
   const endpoints = await getEndpoints();
@@ -91,11 +92,24 @@ export const appRouter = router({
       await recordEndpointMetadata(endpointId, values);
       return { success: true, endpointId };
     }),
-    acknowledgeAlert: protectedProcedure.input(z.object({ alertId: z.string() })).mutation(async ({ input }) => {
+    acknowledgeAlert: protectedProcedure.input(z.object({ alertId: z.string().min(1) })).mutation(async ({ ctx, input }) => {
+      if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin role required' });
+      await acknowledgeSystemAlert(input.alertId);
       return { success: true, alertId: input.alertId };
+    }),
+    setAlertRuleEnabled: protectedProcedure.input(z.object({ ruleId: z.string().min(1), enabled: z.boolean() })).mutation(async ({ ctx, input }) => {
+      if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin role required' });
+      await setAlertRuleEnabled(input.ruleId, input.enabled);
+      return { success: true, ruleId: input.ruleId, enabled: input.enabled };
     }),
     generateToken: protectedProcedure.mutation(async () => {
       return { success: true, token: `sp_enrol_${crypto.randomUUID().replaceAll('-', '')}` };
+    }),
+    requestRefresh: protectedProcedure.input(z.object({ endpointId: z.string().min(1).optional(), modules: z.array(z.string().min(1)).min(1).max(20) })).mutation(async ({ ctx, input }) => {
+      if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin role required' });
+      const requestId = crypto.randomUUID();
+      broadcastRealtimeEvent({ type: 'refresh_request', endpointId: input.endpointId, modules: input.modules, requestId, organizationId: String((ctx.user as typeof ctx.user & { organizationId?: string }).organizationId ?? ctx.user.openId) });
+      return { success: true, requestId };
     }),
   }),
   reports: router({
