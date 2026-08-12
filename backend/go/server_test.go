@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -173,6 +174,26 @@ func TestMigratorNilDB(t *testing.T) {
 	err := migrator.Up()
 	if err == nil {
 		t.Error("Expected error when running migrator with nil database connection")
+	}
+}
+
+func TestStreamWorkerProcessing(t *testing.T) {
+	worker := NewStreamWorker("telemetry-stream", "persister-group", "worker-1")
+	env := TelemetryEnvelope{
+		SchemaVersion:  "1.0",
+		EventID:        "evt-123",
+		EndpointID:     "ep-999",
+		OrganizationID: "org-enterprise-01",
+		CaptureTime:    time.Now().UTC(),
+		SequenceNo:     100,
+		Module:         "cpu",
+		Payload:        map[string]interface{}{"cpu_percent": 15.2},
+	}
+
+	data, _ := json.Marshal(env)
+	err := worker.ProcessEnvelope(context.Background(), data)
+	if err != nil {
+		t.Errorf("Expected stream worker processing to succeed, got %v", err)
 	}
 }
 
