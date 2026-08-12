@@ -1,32 +1,22 @@
-# SentinelPulse Complete End-to-End Implementation Todo
+# SentinelPulse Production Completion TODO
 
-## Phase 1: Backlog & Acceptance Criteria
-- [x] Audit missing platform modules and create verifiable remaining-work backlog.
-
-## Phase 2: Schema & Backend Primitives
-- [x] Expand database schema and tRPC procedures to support battery health, detailed network diagnostics, application usage, device health score, and device management (tags, departments, locations, asset IDs).
-- [x] Implement backend database query helpers for heartbeats, stale device detection, and alert rules.
-
-## Phase 3: Agent Runtime & MSI Release Pipeline
-- [ ] Implement robust SQLite offline buffering and DPAPI encryption modules in the agent codebase.
-- [ ] Implement an authenticated backend endpoint that compiles and serves versioned MSI installers.
-
-## Phase 4: Durable Ingestion & Alert Engine
-- [ ] Implement durable ingestion handler with idempotency key deduplication, exponential backoff, dead-letter queue, and heartbeat tracking.
-- [ ] Implement automated alert evaluation worker for thresholds and check-in timeouts.
-
-## Phase 5: Dashboard Modules & Report Generation
-- [x] Update frontend components and pages to render battery, network, app usage, health score, and device management attributes.
-- [x] Implement true CSV and formatted PDF report export functionality for fleet telemetry and alerts.
-
-## Phase 6: Integration, Migration & Build Validation
-- [ ] Run database migration SQL execution and verify Drizzle/SQL schema synchronization.
-- [ ] Run comprehensive unit and integration test suites, TypeScript checks, and production builds.
-
-## Phase 7: Checkpoint & Delivery
-- [ ] Save final project checkpoint and deliver implementation report.
-
-## Phase 5A: Report Delivery Hardening
-- [ ] Serve generated CSV/PDF artifacts through a verified route and test returned download URLs end-to-end.
-- [ ] Include actual alert records and richer telemetry fields in CSV and PDF outputs.
-- [ ] Add end-to-end report generation and browser download validation from the dashboard header.
+- [x] Phase 0: Architecture Freeze & Documentation (`docs/ARCHITECTURE.md`, `docs/SECURITY_MODEL.md`, `docs/AGENT_PROTOCOL.md`, `docs/DATA_MODEL.md`, `docs/DEPLOYMENT.md`, `docs/THREAT_MODEL.md`)
+- [x] Phase 1: Canonical Go Backend & Security Boundary (API routing, auth, RBAC, tenant context middleware, audit log, unit tests)
+- [ ] Phase 2: PostgreSQL & TimescaleDB Migration (Relational tables, hypertables, token hashing, migration runner)
+- [ ] Phase 3: Redis Streams & Workers (Producer, consumer group, persistence worker, alert rules, heartbeat checks)
+- [ ] Phase 4: Real .NET Agent & Offline Buffer (WMI/CIM collectors, DPAPI encryption, SQLite offline queue, retry backoff, WiX MSI)
+- [ ] Phase 5: Dashboard Integration (Remove preview fallbacks, connect UI to canonical Go API, secure realtime and exports)
+- [ ] Phase 6: Packaging, Deployment & CI/CD (Docker Compose, Kubernetes manifests, GitHub Actions CI workflow with matrix)
+- [ ] Phase 7: Acceptance Validation (End-to-end tests, security scans, compliance verification)
+- [x] Phase 1 Subtask: Implement robust JWT/token verification with fail-closed authentication
+- [x] Phase 1 Subtask: Enforce mandatory tenant derivation from authenticated session context
+- [x] Phase 1 Subtask: Implement persistent audit log storage and query handlers
+- [x] Phase 1 Subtask: Implement production JWT validation with claims verification and secret config
+- [x] Phase 1 Subtask: Implement persistent PostgreSQL audit log repository and write helpers
+- [x] Phase 1 Subtask: Wire Go backend to live PostgreSQL database connection with fail-closed startup check
+- [x] Phase 1 Subtask: Implement production database connection and fail-closed startup ping in `server.go`
+- [x] Phase 1 Subtask: Add PostgreSQL integration test suite for audit log persistence
+- [x] Phase 1 Subtask: Enforce strict production fail-closed guard when DATABASE_URL is missing in production mode
+- [x] Phase 1 Subtask: Write Go integration tests for live PostgreSQL audit log persistence and startup failure handling
+- [ ] Phase 1 Subtask: Add live PostgreSQL integration tests for PersistentAuditRepository insert/read
+- [ ] Phase 1 Subtask: Add test coverage for production fail-closed startup behavior when database is unreachable
