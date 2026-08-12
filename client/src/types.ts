@@ -178,3 +178,41 @@ export interface EnrollmentToken {
   usedByEndpointId?: string | null;
   createdAt: string;
 }
+
+export interface ExtendedHardwareInfo extends HardwareInfo {
+  cpuClockSpeedMhz: number;
+  cpuTemperatureCelsius?: number;
+  gpuVramMb: number;
+  gpuUtilizationPercent?: number;
+  peripherals: { id: string; name: string; deviceType: string }[];
+}
+
+export interface ExtendedDiskInfo extends DiskInfo {
+  model: string;
+  diskType: 'SSD' | 'HDD' | 'NVMe';
+  iops?: number;
+  throughputMbps?: number;
+}
+
+export interface BatteryInfo {
+  chargePercent: number;
+  healthPercent: number;
+  chargingStatus: 'Charging' | 'Discharging' | 'FullyCharged' | 'Unknown';
+  designCapacityMah: number;
+  fullChargeCapacityMah: number;
+  cycleCount: number;
+  temperatureCelsius?: number;
+}
+
+export interface NetworkAdapterInfo {
+  name: string;
+  ipAddress: string;
+  macAddress: string;
+  gateway: string;
+  ssid?: string;
+  signalStrengthPercent?: number;
+  downloadBps: number;
+  uploadBps: number;
+  latencyMs: number;
+  vpnActive: boolean;
+}

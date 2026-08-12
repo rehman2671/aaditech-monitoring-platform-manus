@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { toast } from 'sonner';
+import ExtendedTelemetryPanel from '@/components/ExtendedTelemetryPanel';
 
 interface EndpointDetailProps {
   endpoints: Endpoint[];
@@ -189,6 +190,7 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
               </div>
             </div>
           </div>
+          <ExtendedTelemetryPanel endpoint={endpoint} />
         </TabsContent>
 
         {/* Tab 2: Hardware & Disks */}

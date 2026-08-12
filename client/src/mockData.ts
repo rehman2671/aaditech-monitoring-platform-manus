@@ -1,4 +1,4 @@
-import { Endpoint, AlertRule, SystemAlert, EnrollmentToken } from './types';
+import type { Endpoint, AlertRule, SystemAlert, EnrollmentToken, DiskInfo, BatteryInfo, NetworkAdapterInfo } from './types';
 
 export const initialEndpoints: Endpoint[] = [
   {
@@ -331,3 +331,60 @@ export const initialEnrollmentTokens: EnrollmentToken[] = [
     createdAt: new Date(Date.now() - 86400000 * 10).toISOString()
   }
 ];
+
+// Deterministic extended telemetry used by the preview and contract tests until a Windows agent payload replaces it.
+const extendedPreviewEndpoints = initialEndpoints as Array<Endpoint & {
+  extendedHardware: {
+    cpuClockSpeedMhz: number;
+    cpuTemperatureCelsius: number;
+    gpuVramMb: number;
+    gpuUtilizationPercent: number;
+    peripherals: { id: string; name: string; deviceType: string }[];
+  };
+  extendedDisks: Array<DiskInfo & { model: string; diskType: 'SSD' | 'HDD' | 'NVMe'; iops: number; throughputMbps: number }>;
+  battery: BatteryInfo;
+  networkAdapters: NetworkAdapterInfo[];
+  healthScore: number;
+}>;
+
+extendedPreviewEndpoints.forEach((endpoint, index) => {
+  endpoint.extendedHardware = {
+    cpuClockSpeedMhz: index === 0 ? 5000 : 4200,
+    cpuTemperatureCelsius: index === 0 ? 61 : 54,
+    gpuVramMb: index === 0 ? 8192 : 4096,
+    gpuUtilizationPercent: index === 0 ? 32 : 18,
+    peripherals: [
+      { id: `${endpoint.id}-monitor`, name: 'Dell U2723QE', deviceType: 'Monitor' },
+      { id: `${endpoint.id}-dock`, name: 'USB-C Dock', deviceType: 'USB Peripheral' },
+    ],
+  };
+  endpoint.extendedDisks = endpoint.disks.map((disk, diskIndex) => ({
+    ...disk,
+    model: diskIndex === 0 ? 'Samsung PM9A1 NVMe' : 'Seagate Enterprise HDD',
+    diskType: diskIndex === 0 ? 'NVMe' : 'HDD',
+    iops: diskIndex === 0 ? 78000 : 320,
+    throughputMbps: diskIndex === 0 ? 3200 : 180,
+  }));
+  endpoint.battery = {
+    chargePercent: 78 - index * 7,
+    healthPercent: 93 - index * 3,
+    chargingStatus: index % 2 === 0 ? 'Charging' : 'Discharging',
+    designCapacityMah: 86000,
+    fullChargeCapacityMah: 80000 - index * 1200,
+    cycleCount: 128 + index * 41,
+    temperatureCelsius: 31 + index,
+  };
+  endpoint.networkAdapters = [{
+    name: index % 2 === 0 ? 'Intel Wi-Fi 6E AX211' : 'Intel Ethernet I225-V',
+    ipAddress: endpoint.ipAddress,
+    macAddress: endpoint.macAddress,
+    gateway: '10.104.12.1',
+    ssid: index % 2 === 0 ? 'CORP-SECURE' : undefined,
+    signalStrengthPercent: index % 2 === 0 ? 86 - index * 4 : undefined,
+    downloadBps: 42_000_000 - index * 3_000_000,
+    uploadBps: 8_000_000 - index * 500_000,
+    latencyMs: 11 + index * 3,
+    vpnActive: index % 3 === 0,
+  }];
+  endpoint.healthScore = 92 - index * 5;
+});

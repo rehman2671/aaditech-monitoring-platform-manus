@@ -19,6 +19,7 @@ import NotFound from './pages/NotFound';
 import { initialEndpoints, initialAlertRules, initialSystemAlerts, initialEnrollmentTokens } from './mockData';
 import type { AuthSession, Endpoint, AlertRule, SystemAlert, EnrollmentToken, RealtimeEvent } from './types';
 import { toast } from 'sonner';
+import { SseRealtimeClient } from '@/lib/sseRealtime';
 
 /** Precision Enterprise Glass: persistent control shell, typed transport seams, and role-aware operator actions. */
 const previewSession: AuthSession = {
@@ -161,6 +162,19 @@ export default function App() {
     if (event.type === 'new_alert') toast.warning('New alert received from alerting engine');
     if (event.type === 'alert_resolved') toast.success('Alert resolved by processing worker');
   };
+
+  useEffect(() => {
+    if (!session || typeof window === 'undefined') return;
+    const client = new SseRealtimeClient({
+      url: `${window.location.origin}/api/realtime/stream`,
+      onEvent: handleRealtimeEvent,
+      onStatus: status => {
+        if (status === 'error') toast.error('Live telemetry connection unavailable', { description: 'The dashboard will continue using cached endpoint state.' });
+      },
+    });
+    client.connect();
+    return () => client.close();
+  }, [session]);
 
   const handleAcknowledgeAlert = (alertId: string) => {
     if (!isAdmin) {
