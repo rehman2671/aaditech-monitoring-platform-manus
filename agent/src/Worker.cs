@@ -29,13 +29,24 @@ namespace SentinelPulse.Agent
         {
             _logger.LogInformation("SentinelPulse Windows Worker Service started at: {time}", DateTimeOffset.Now);
 
+            // Push initial hardware inventory upon startup
+            try
+            {
+                var hardware = _hardwareCollector.GetHardwareSnapshot();
+                await _apiClient.PushTelemetryAsync("hardware", hardware);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to push initial hardware inventory.");
+            }
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
                     _logger.LogInformation("Collecting endpoint telemetry and performance counters...");
                     var metrics = _performanceCollector.GatherCurrentMetrics();
-                    await _apiClient.PushTelemetryAsync(metrics);
+                    await _apiClient.PushTelemetryAsync("performance", metrics);
                 }
                 catch (Exception ex)
                 {

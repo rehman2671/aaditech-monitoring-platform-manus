@@ -218,6 +218,24 @@ func securityAndTenantMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func openDatabaseForEnvironment(env, databaseURL string) (*sql.DB, error) {
+	if databaseURL == "" {
+		if env == "production" || env == "prod" {
+			return nil, errors.New("DATABASE_URL is mandatory in production mode")
+		}
+		return nil, nil
+	}
+	db, err := sql.Open("postgres", databaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("open PostgreSQL connection: %w", err)
+	}
+	if err := db.Ping(); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("ping PostgreSQL connection: %w", err)
+	}
+	return db, nil
+}
+
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -235,21 +253,13 @@ func main() {
 	}
 
 	databaseURL := os.Getenv("DATABASE_URL")
-	var db *sql.DB
-	if databaseURL != "" {
-		var err error
-		db, err = sql.Open("postgres", databaseURL)
-		if err != nil {
-			log.Fatalf("[Database] Failed to open PostgreSQL connection: %v", err)
-		}
-		if err := db.Ping(); err != nil {
-			log.Fatalf("[Database] Failed to ping PostgreSQL database (fail-closed startup check): %v", err)
-		}
+	db, err := openDatabaseForEnvironment(env, databaseURL)
+	if err != nil {
+		log.Fatalf("[Database] Fatal startup check failed: %v", err)
+	}
+	if db != nil {
 		log.Println("[Database] Successfully connected to PostgreSQL hypertable database.")
 	} else {
-		if env == "production" || env == "prod" {
-			log.Fatal("[Database] Fatal: DATABASE_URL is mandatory in production mode (fail-closed).")
-		}
 		log.Println("[Database] Warning: DATABASE_URL not set. Running with memory audit store fallback (development mode).")
 	}
 

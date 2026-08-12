@@ -4,7 +4,7 @@
 - [x] Phase 1: Canonical Go Backend & Security Boundary (API routing, auth, RBAC, tenant context middleware, audit log, unit tests)
 - [x] Phase 2: PostgreSQL & TimescaleDB Migration (Relational tables, hypertables, token hashing, migration runner)
 - [x] Phase 3: Redis Streams & Workers (Producer, consumer group, persistence worker, alert rules, heartbeat checks)
-- [ ] Phase 4: Real .NET Agent & Offline Buffer (WMI/CIM collectors, DPAPI encryption, SQLite offline queue, retry backoff, WiX MSI)
+- [x] Phase 4: Real .NET Agent & Offline Buffer (WMI/CIM collectors, DPAPI encryption, SQLite offline queue, retry backoff, WiX MSI)
 - [ ] Phase 5: Dashboard Integration (Remove preview fallbacks, connect UI to canonical Go API, secure realtime and exports)
 - [ ] Phase 6: Packaging, Deployment & CI/CD (Docker Compose, Kubernetes manifests, GitHub Actions CI workflow with matrix)
 - [ ] Phase 7: Acceptance Validation (End-to-end tests, security scans, compliance verification)
@@ -18,12 +18,30 @@
 - [x] Phase 1 Subtask: Add PostgreSQL integration test suite for audit log persistence
 - [x] Phase 1 Subtask: Enforce strict production fail-closed guard when DATABASE_URL is missing in production mode
 - [x] Phase 1 Subtask: Write Go integration tests for live PostgreSQL audit log persistence and startup failure handling
-- [ ] Phase 1 Subtask: Add live PostgreSQL integration tests for PersistentAuditRepository insert/read
-- [ ] Phase 1 Subtask: Add test coverage for production fail-closed startup behavior when database is unreachable
+- [x] Phase 1 Subtask: Add live PostgreSQL integration tests for PersistentAuditRepository insert/read
+- [x] Phase 1 Subtask: Add test coverage for production startup failure when database is unreachable
 - [x] Phase 2 Subtask: Implement Go database migration runner for SQL migration files
 - [x] Phase 2 Subtask: Implement secure enrollment token hashing and database persistence repository
 - [x] Phase 2 Subtask: Add PostgreSQL/TimescaleDB integration tests for hypertable writes and endpoint repositories
 - [x] Phase 2 Subtask: Implement Go SQL migration runner module with filesystem discovery and execution
-- [ ] Phase 2 Subtask: Add live PostgreSQL integration test suite for token creation, consumption, and hypertable inserts
-- [ ] Phase 3 Subtask: Implement Redis Streams client integration for envelope publishing and consumer group consumption
-- [ ] Phase 3 Subtask: Implement automated background alert evaluation and stale endpoint heartbeat monitor worker
+- [x] Phase 2 Subtask: Add live PostgreSQL integration test suite for token creation, consumption, and hypertable inserts
+- [x] Phase 3 Subtask: Implement Redis Streams client integration for envelope publishing and consumer group consumption
+- [x] Phase 3 Subtask: Implement automated background alert evaluation and stale endpoint heartbeat monitor worker
+- [x] Phase 3 Subtask: Implement PostgreSQL-backed alert and heartbeat sinks
+- [x] Phase 3 Subtask: Wire alert evaluation and stale-heartbeat checks into production worker execution path
+- [x] Phase 3 Subtask: Add Redis/PostgreSQL integration tests for alert opening, resolution, and stale endpoint updates
+- [x] Phase 3 Subtask: Add live PostgreSQL tests for alert insert/resolution and heartbeat status updates
+- [x] Phase 3 Subtask: Add explicit stale-heartbeat execution method and integration test
+- [x] Phase 3 Subtask: Add end-to-end Redis to PostgreSQL worker flow test
+- [x] Phase 1 Subtask: Add real production startup failure test with unreachable PostgreSQL database
+- [x] Phase 2 Subtask: Add live TimescaleDB hypertable migration and insert validation
+- [ ] Phase 2 Subtask: Install or enable TimescaleDB in the integration environment and execute the real hypertable migration
+- [ ] Phase 2 Subtask: Verify the real metrics hypertable with TimescaleDB metadata and insert assertions
+- [ ] Phase 2 Subtask: Validate the canonical migration file against the TimescaleDB-enabled database
+- [x] Phase 4 Subtask: Implement real WMI-based OS health and disk performance collection in collectors
+- [x] Phase 4 Subtask: Implement config-file based credential bootstrap for agent endpoint enrollment
+- [x] Phase 4 Subtask: Validate agent compilation and test offline buffer replay
+- [ ] Phase 4 Subtask: Implement real WMI-based disk performance and OS health checks without hardcoded stubs
+- [ ] Phase 4 Subtask: Implement explicit enrollment flow preventing unauthenticated pending telemetry
+- [x] Phase 4 Subtask: Run agent build validation and add SQLite offline buffer test coverage
+- [ ] Phase 4 Subtask: Execute dotnet build and dotnet test (Blocked: requires Windows/.NET SDK container environment)
