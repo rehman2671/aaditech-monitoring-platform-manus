@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" Name="SentinelPulse Windows Agent" Language="1033" Version="2.4.1.0" Manufacturer="SentinelPulse Enterprise" UpgradeCode="12345678-abcd-1234-abcd-123456789abc">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="SentinelPulseAgent">
+          <Component Id="AgentBinaryComponent" Guid="*">
+            <File Id="AgentExe" Source="..\publish\SentinelPulse.Agent.exe" KeyPath="yes" />
+            <ServiceInstall Id="ServiceInstaller" Type="ownProcess" Name="SentinelPulseAgent" DisplayName="SentinelPulse Windows Agent" Description="Real-time ESI telemetry collector and diagnostic worker." Start="auto" Account="LocalSystem" ErrorControl="normal" />
+            <ServiceControl Id="ServiceControler" Name="SentinelPulseAgent" Start="install" Stop="both" Remove="uninstall" />
+          </Component>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <Feature Id="ProductFeature" Title="SentinelPulse Agent" Level="1">
+      <ComponentRef Id="AgentBinaryComponent" />
+    </Feature>
+  </Product>
+</Wix>
