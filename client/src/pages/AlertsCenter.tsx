@@ -9,9 +9,10 @@ interface AlertsCenterProps {
   systemAlerts: SystemAlert[];
   onToggleRule: (ruleId: string) => void;
   onAcknowledgeAlert: (alertId: string) => void;
+  canWrite: boolean;
 }
 
-export default function AlertsCenter({ alertRules, systemAlerts, onToggleRule, onAcknowledgeAlert }: AlertsCenterProps) {
+export default function AlertsCenter({ alertRules, systemAlerts, onToggleRule, onAcknowledgeAlert, canWrite }: AlertsCenterProps) {
   const [activeTab, setActiveTab] = useState<'active' | 'rules'>('active');
 
   return (
@@ -95,8 +96,8 @@ export default function AlertsCenter({ alertRules, systemAlerts, onToggleRule, o
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-base font-bold text-white">Configured Threshold Rules</h3>
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-500 text-xs gap-1">
-              <Plus className="w-3.5 h-3.5" /> Add Rule
+            <Button disabled={!canWrite} size="sm" className="bg-blue-600 hover:bg-blue-500 text-xs gap-1 disabled:opacity-50" title={canWrite ? 'Add threshold rule' : 'Admin role required'}>
+              <Plus className="w-3.5 h-3.5" /> {canWrite ? 'Add Rule' : 'Admin Role Required'}
             </Button>
           </div>
           <div className="space-y-3">
@@ -115,13 +116,14 @@ export default function AlertsCenter({ alertRules, systemAlerts, onToggleRule, o
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 font-mono">
-                    Condition: {rule.metric} {rule.condition} {rule.thresholdValue}
+                    Condition: {rule.metric} {rule.condition} {rule.thresholdValue} • Sustain: {rule.durationMinutes ?? (rule.metric === 'offline' ? 5 : rule.metric === 'ram' || rule.metric === 'cpu' ? 15 : 0)} min
                   </p>
                 </div>
                 <button
+                  disabled={!canWrite}
                   onClick={() => {
                     onToggleRule(rule.id);
-                    toast.success(`Rule "${rule.name}" status toggled`);
+                    if (canWrite) toast.success(`Rule \"${rule.name}\" status toggled`);
                   }}
                   className="flex items-center gap-2 text-xs font-mono text-slate-300"
                 >

@@ -1,4 +1,68 @@
 export type EndpointStatus = 'online' | 'offline' | 'pending' | 'warning' | 'critical';
+export type UserRole = 'admin' | 'viewer';
+export type AlertLifecycle = 'firing' | 'resolved';
+
+export interface StandardErrorEnvelope {
+  error: { code: string; message: string; details?: Record<string, unknown> };
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  role: UserRole;
+  organizationId: string;
+}
+
+export interface AuthSession {
+  accessToken: string;
+  expiresAt: string;
+  user: AuthUser;
+}
+
+export interface DashboardSummary {
+  totalEndpoints: number;
+  onlineEndpoints: number;
+  offlineEndpoints: number;
+  warningEndpoints: number;
+  activeAlerts: number;
+  diskCriticalCount: number;
+}
+
+export interface AlertRuleContract {
+  id: string;
+  organizationId: string;
+  metric: 'disk_free_percent' | 'ram_usage_percent' | 'cpu_usage_percent' | 'endpoint_offline' | 'driver_status' | 'smart_health_status';
+  condition: 'gt' | 'lt' | 'eq';
+  threshold: number | null;
+  durationMinutes: number;
+  enabled: boolean;
+}
+
+export interface AlertContract {
+  id: string;
+  endpointId: string;
+  alertRuleId: string;
+  triggeredAt: string;
+  resolvedAt: string | null;
+  status: AlertLifecycle;
+  details: Record<string, unknown>;
+}
+
+export interface ApiRequestEnvelope {
+  endpoint_id: string;
+  module: 'performance' | 'disks' | 'drivers' | 'software' | 'hardware' | 'os_health' | 'event_logs' | 'identity';
+  captured_at: string;
+  on_demand: boolean;
+  request_id?: string;
+  payload: Record<string, unknown>;
+}
+
+export type RealtimeEvent =
+  | { type: 'endpoint_status_changed'; endpointId: string; status: EndpointStatus; lastSeenAt: string }
+  | { type: 'new_alert'; alert: AlertContract }
+  | { type: 'alert_resolved'; alertId: string; resolvedAt: string }
+  | { type: 'metrics_updated'; endpointId: string; capturedAt: string }
+  | { type: 'refresh_request'; modules: string[]; requestId: string };
 
 export interface DiskInfo {
   id: string;
@@ -92,6 +156,7 @@ export interface AlertRule {
   thresholdValue: number;
   severity: 'warning' | 'critical';
   enabled: boolean;
+  durationMinutes?: number;
 }
 
 export interface SystemAlert {

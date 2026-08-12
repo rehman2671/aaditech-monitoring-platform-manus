@@ -7,9 +7,10 @@ import { toast } from 'sonner';
 interface EnrollmentTokensProps {
   tokens: EnrollmentToken[];
   onCreateToken: () => void;
+  canWrite: boolean;
 }
 
-export default function EnrollmentTokens({ tokens, onCreateToken }: EnrollmentTokensProps) {
+export default function EnrollmentTokens({ tokens, onCreateToken, canWrite }: EnrollmentTokensProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleCopy = (tokenStr: string, id: string) => {
@@ -26,14 +27,16 @@ export default function EnrollmentTokens({ tokens, onCreateToken }: EnrollmentTo
           <h2 className="text-2xl font-extrabold text-white tracking-tight">Agent Enrollment Tokens</h2>
           <p className="text-sm text-slate-400 mt-1">Secure enrollment tokens used by Windows background agents during initial registration.</p>
         </div>
-        <Button 
+        <Button
+          disabled={!canWrite}
           onClick={() => {
             onCreateToken();
-            toast.success('New enrollment token generated successfully');
+            if (canWrite) toast.success('New enrollment token generated successfully');
           }}
-          className="bg-blue-600 hover:bg-blue-500 text-white font-semibold gap-2 shadow-lg shadow-blue-600/20"
+          title={canWrite ? 'Generate enrollment token' : 'Admin role required'}
+          className="bg-blue-600 hover:bg-blue-500 text-white font-semibold gap-2 shadow-lg shadow-blue-600/20 disabled:opacity-50"
         >
-          <Plus className="w-4 h-4" /> Generate New Token
+          <Plus className="w-4 h-4" /> {canWrite ? 'Generate New Token' : 'Admin Role Required'}
         </Button>
       </div>
 

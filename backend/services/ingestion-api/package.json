@@ -1,0 +1,12 @@
+{
+  "name": "@sentinelpulse/ingestion-api",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.ts",
+  "dependencies": {
+    "fastify": "^4.26.0",
+    "pg": "^8.11.3",
+    "redis": "^4.6.13",
+    "zod": "^3.22.4"
+  }
+}

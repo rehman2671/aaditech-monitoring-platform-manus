@@ -273,11 +273,11 @@ export const initialEndpoints: Endpoint[] = [
 ];
 
 export const initialAlertRules: AlertRule[] = [
-  { id: 'rule-1', name: 'CPU Utilization Sustained High', metric: 'cpu', condition: '>', thresholdValue: 85, severity: 'warning', enabled: true },
-  { id: 'rule-2', name: 'RAM Usage Critical Threshold', metric: 'ram', condition: '>', thresholdValue: 90, severity: 'critical', enabled: true },
-  { id: 'rule-3', name: 'Disk Space Low (< 15% Free)', metric: 'disk_free', condition: '<', thresholdValue: 15, severity: 'critical', enabled: true },
-  { id: 'rule-4', name: 'Endpoint Offline Heartbeat Loss', metric: 'offline', condition: '>', thresholdValue: 15, severity: 'warning', enabled: true },
-  { id: 'rule-5', name: 'Driver or Hardware Error Detected', metric: 'driver_error', condition: '>', thresholdValue: 0, severity: 'warning', enabled: true }
+  { id: 'rule-1', name: 'CPU Utilization Sustained High', metric: 'cpu', condition: '>', thresholdValue: 95, severity: 'warning', enabled: true, durationMinutes: 15 },
+  { id: 'rule-2', name: 'RAM Usage Critical Threshold', metric: 'ram', condition: '>', thresholdValue: 90, severity: 'critical', enabled: true, durationMinutes: 15 },
+  { id: 'rule-3', name: 'Disk Space Low (< 10% Free)', metric: 'disk_free', condition: '<', thresholdValue: 10, severity: 'critical', enabled: true, durationMinutes: 0 },
+  { id: 'rule-4', name: 'Endpoint Offline Heartbeat Loss', metric: 'offline', condition: '>', thresholdValue: 5, severity: 'warning', enabled: true, durationMinutes: 5 },
+  { id: 'rule-5', name: 'Driver or Hardware Error Detected', metric: 'driver_error', condition: '>', thresholdValue: 0, severity: 'warning', enabled: true, durationMinutes: 0 }
 ];
 
 export const initialSystemAlerts: SystemAlert[] = [

@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'wouter';
+import type { UserRole } from '../types';
 import { 
   LayoutDashboard, 
   Server, 
@@ -14,9 +15,11 @@ import {
 interface SidebarProps {
   endpointsCount: number;
   criticalAlertsCount: number;
+  userRole: UserRole;
+  onExportFleet: () => void;
 }
 
-export default function Sidebar({ endpointsCount, criticalAlertsCount }: SidebarProps) {
+export default function Sidebar({ endpointsCount, criticalAlertsCount, userRole, onExportFleet }: SidebarProps) {
   const [location] = useLocation();
 
   const navItems = [
@@ -73,6 +76,14 @@ export default function Sidebar({ endpointsCount, criticalAlertsCount }: Sidebar
             </Link>
           );
         })}
+
+        <div className="pt-5 mt-5 border-t border-slate-800/80">
+          <p className="px-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase mb-2">Data Portability</p>
+          <button onClick={onExportFleet} className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-900 hover:text-slate-200 transition-all">
+            <span className="flex items-center gap-3"><Terminal className="w-4 h-4 text-slate-500" /> Export Fleet JSON</span>
+            <span className="text-[10px] font-mono text-slate-600 uppercase">{userRole}</span>
+          </button>
+        </div>
       </div>
 
       {/* Agent Status Footer Widget */}

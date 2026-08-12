@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: secure_dev_password
+      POSTGRES_DB: sentinelpulse_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../backend/migrations:/docker-entrypoint-initdb.d
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  ingestion-api:
+    build:
+      context: ../backend/services/ingestion-api
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - DATABASE_URL=postgres://sentinel:secure_dev_password@postgres:5432/sentinelpulse_dev
+      - REDIS_URL=redis://redis:6379
+
+volumes:
+  pgdata:
