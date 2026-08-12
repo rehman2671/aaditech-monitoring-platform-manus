@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -115,4 +115,19 @@ export async function getEnrollmentTokens(orgId = 'org-enterprise-01') {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(enrollmentTokens).where(eq(enrollmentTokens.organizationId, orgId));
+}
+
+export async function recordEndpointHeartbeat(endpointId: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(endpoints)
+    .set({ lastSeenAt: new Date(), status: 'online' })
+    .where(eq(endpoints.id, endpointId));
+}
+
+export async function getStaleEndpoints(thresholdMinutes = 15) {
+  const db = await getDb();
+  if (!db) return [];
+  const cutoff = new Date(Date.now() - thresholdMinutes * 60 * 1000);
+  return await db.select().from(endpoints).where(sql`lastSeenAt < ${cutoff} AND status = 'online'`);
 }

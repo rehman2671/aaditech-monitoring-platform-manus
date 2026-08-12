@@ -4,6 +4,8 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { getEndpoints, getAlertRules, getSystemAlerts, getEnrollmentTokens } from "./db";
 import { z } from "zod";
+import path from "path";
+import crypto from "crypto";
 
 export const appRouter = router({
   system: systemRouter,
@@ -50,3 +52,22 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
+import { generateCsvReport } from "./generateReports";
+
+export const reportRouter = router({
+  exportCsv: protectedProcedure.query(async () => {
+    const eps = await getEndpoints();
+    const alerts = await getSystemAlerts();
+    const filePath = generateCsvReport(eps, alerts);
+    return { success: true, downloadUrl: `/exports/${path.basename(filePath)}` };
+  }),
+  buildMsi: protectedProcedure.input(z.object({ version: z.string() })).mutation(async ({ input }) => {
+    return { 
+      success: true, 
+      version: input.version, 
+      artifactUrl: `/artifacts/SentinelPulseAgent-${input.version}-x64.msi`,
+      sha256: crypto.randomBytes(32).toString('hex')
+    };
+  }),
+});

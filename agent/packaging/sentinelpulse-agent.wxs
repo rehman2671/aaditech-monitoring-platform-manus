@@ -1,23 +1,191 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-  <Product Id="*" Name="SentinelPulse Windows Agent" Language="1033" Version="2.4.1.0" Manufacturer="SentinelPulse Enterprise" UpgradeCode="12345678-abcd-1234-abcd-123456789abc">
-    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
-    <MediaTemplate EmbedCab="yes" />
+<!--
+  SentinelPulse Windows Agent MSI - WiX Toolset v4
 
-    <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="ProgramFilesFolder">
-        <Directory Id="INSTALLFOLDER" Name="SentinelPulseAgent">
-          <Component Id="AgentBinaryComponent" Guid="*">
-            <File Id="AgentExe" Source="..\publish\SentinelPulse.Agent.exe" KeyPath="yes" />
-            <ServiceInstall Id="ServiceInstaller" Type="ownProcess" Name="SentinelPulseAgent" DisplayName="SentinelPulse Windows Agent" Description="Real-time ESI telemetry collector and diagnostic worker." Start="auto" Account="LocalSystem" ErrorControl="normal" />
-            <ServiceControl Id="ServiceControler" Name="SentinelPulseAgent" Start="install" Stop="both" Remove="uninstall" />
-          </Component>
-        </Directory>
+  Expected build inputs:
+    -dAgentVersion=2.4.1.0
+    -dAgentSemVer=2.4.1
+    -dPublishDir=..\publish
+
+  Example:
+    wix build -arch x64 \
+      -dAgentVersion=2.4.1.0 \
+      -dAgentSemVer=2.4.1 \
+      -dPublishDir=..\publish \
+      sentinelpulse-agent.wxs \
+      -o ..\artifacts\SentinelPulseAgent-2.4.1-x64.msi
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <!-- Stable identifier shared by all SentinelPulse Agent releases. -->
+  <?define AgentUpgradeCode = "7D0DE72F-9425-4F9B-93AD-BE3F3E58A1C8" ?>
+
+  <!-- Required build-time variables. -->
+  <?ifndef AgentVersion ?>
+    <?define AgentVersion = "2.4.1.0" ?>
+  <?endif ?>
+  <?ifndef AgentSemVer ?>
+    <?define AgentSemVer = "2.4.1" ?>
+  <?endif ?>
+  <?ifndef PublishDir ?>
+    <?define PublishDir = "..\publish" ?>
+  <?endif ?>
+
+  <Package
+      Name="SentinelPulse Windows Agent"
+      Manufacturer="SentinelPulse Enterprise"
+      Version="$(var.AgentVersion)"
+      UpgradeCode="$(var.AgentUpgradeCode)"
+      Language="1033"
+      Scope="perMachine"
+      Compressed="yes"
+      InstallerVersion="500">
+
+    <SummaryInformation Description="SentinelPulse Windows Endpoint Monitoring Agent $(var.AgentSemVer)" />
+
+    <!-- Prevent downgrades while allowing major, minor, and patch upgrades. -->
+    <MajorUpgrade
+        DowngradeErrorMessage="A newer version of SentinelPulse Windows Agent is already installed."
+        AllowSameVersionUpgrades="no"
+        Schedule="afterInstallInitialize" />
+
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!--
+      The installer is intentionally quiet and service-oriented. The CI job
+      uses /qn for unattended installation; enterprise deployment systems can
+      supply the same MSI properties through Group Policy or Intune.
+    -->
+    <Property Id="ARPNOREPAIR" Value="no" />
+    <Property Id="ARPNOMODIFY" Value="no" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="SentinelPulse">
+        <Directory Id="AGENTFOLDER" Name="Agent" />
       </Directory>
-    </Directory>
+    </StandardDirectory>
 
-    <Feature Id="ProductFeature" Title="SentinelPulse Agent" Level="1">
-      <ComponentRef Id="AgentBinaryComponent" />
+    <StandardDirectory Id="CommonApplicationDataFolder">
+      <Directory Id="PROGRAMDATAFOLDER" Name="SentinelPulse">
+        <Directory Id="CONFIGFOLDER" Name="Agent" />
+        <Directory Id="BUFFERFOLDER" Name="Buffer" />
+        <Directory Id="LOGFOLDER" Name="Logs" />
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="MainFeature" Title="SentinelPulse Windows Agent $(var.AgentSemVer)" Level="1">
+      <ComponentRef Id="AgentServiceComponent" />
+      <ComponentGroupRef Id="AgentPayloadGroup" />
+      <ComponentRef Id="ConfigurationDirectoriesComponent" />
+      <ComponentRef Id="BufferDirectoryComponent" />
+      <ComponentRef Id="LogDirectoryComponent" />
     </Feature>
-  </Product>
+  </Package>
+
+  <Fragment>
+    <!--
+      The service component owns the executable and service registration.
+      The executable is explicitly excluded from AgentPayloadGroup below so
+      it has exactly one MSI component key path.
+    -->
+    <Component Id="AgentServiceComponent" Directory="AGENTFOLDER" Guid="*">
+      <File
+          Id="AgentExecutable"
+          Source="$(var.PublishDir)\SentinelPulse.Agent.exe"
+          KeyPath="yes"
+          Checksum="yes" />
+
+      <ServiceInstall
+          Id="SentinelPulseAgentServiceInstall"
+          Type="ownProcess"
+          Name="SentinelPulseAgent"
+          DisplayName="SentinelPulse Windows Agent"
+          Description="Collects Windows endpoint health, hardware, performance, process, and event telemetry for SentinelPulse."
+          Start="auto"
+          Account="LocalSystem"
+          ErrorControl="normal"
+          Vital="yes"
+          Interactive="no" />
+
+      <ServiceControl
+          Id="SentinelPulseAgentServiceControl"
+          Name="SentinelPulseAgent"
+          Start="install"
+          Stop="both"
+          Remove="uninstall"
+          Wait="yes" />
+
+      <!-- Record the installed version for diagnostics and support tooling. -->
+      <RegistryValue
+          Root="HKLM"
+          Key="Software\SentinelPulse\Agent"
+          Name="Version"
+          Type="string"
+          Value="$(var.AgentSemVer)" />
+      <RegistryValue
+          Root="HKLM"
+          Key="Software\SentinelPulse\Agent"
+          Name="InstallPath"
+          Type="string"
+          Value="[AGENTFOLDER]" />
+    </Component>
+  </Fragment>
+
+  <Fragment>
+    <!--
+      Include the complete dotnet publish directory: DLLs, native runtime
+      dependencies, JSON configuration, and the executable's support files.
+      The service executable is excluded because AgentServiceComponent owns it.
+    -->
+    <ComponentGroup Id="AgentPayloadGroup" Directory="AGENTFOLDER">
+      <Files
+          Include="$(var.PublishDir)\**"
+          Exclude="$(var.PublishDir)\SentinelPulse.Agent.exe" />
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <!--
+      Create persistent ProgramData directories. Registry values provide
+      stable component key paths without placing configuration secrets in the
+      MSI. The agent creates its encrypted configuration and SQLite files at
+      runtime using DPAPI and the service account identity.
+    -->
+    <Component Id="ConfigurationDirectoriesComponent" Directory="CONFIGFOLDER" Guid="*">
+      <CreateFolder />
+      <RegistryValue
+          Root="HKLM"
+          Key="Software\SentinelPulse\Agent"
+          Name="ConfigurationDirectory"
+          Type="string"
+          Value="[CONFIGFOLDER]"
+          KeyPath="yes" />
+      <RemoveFolder Id="RemoveConfigurationDirectory" On="uninstall" />
+    </Component>
+
+    <Component Id="BufferDirectoryComponent" Directory="BUFFERFOLDER" Guid="*">
+      <CreateFolder />
+      <RegistryValue
+          Root="HKLM"
+          Key="Software\SentinelPulse\Agent"
+          Name="BufferDirectory"
+          Type="string"
+          Value="[BUFFERFOLDER]"
+          KeyPath="yes" />
+      <RemoveFolder Id="RemoveBufferDirectory" On="uninstall" />
+    </Component>
+
+    <Component Id="LogDirectoryComponent" Directory="LOGFOLDER" Guid="*">
+      <CreateFolder />
+      <RegistryValue
+          Root="HKLM"
+          Key="Software\SentinelPulse\Agent"
+          Name="LogDirectory"
+          Type="string"
+          Value="[LOGFOLDER]"
+          KeyPath="yes" />
+      <RemoveFolder Id="RemoveLogDirectory" On="uninstall" />
+    </Component>
+  </Fragment>
+
 </Wix>

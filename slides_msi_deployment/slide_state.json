@@ -1,0 +1,56 @@
+{
+  "project_info": {
+    "title": "Enterprise Windows Fleet Monitoring Demands Native Service Architecture and Unattended MSI Deployment",
+    "created": 1786546367.194,
+    "last_updated": 1786546441.547,
+    "total_slides": 4
+  },
+  "slides": [
+    {
+      "id": "intro",
+      "state": "edited",
+      "pageNum": 1
+    },
+    {
+      "id": "resilience",
+      "state": "edited",
+      "pageNum": 2
+    },
+    {
+      "id": "wix_packaging",
+      "state": "edited",
+      "pageNum": 3
+    },
+    {
+      "id": "cicd_pipeline",
+      "state": "edited",
+      "pageNum": 4
+    }
+  ],
+  "outline": [
+    {
+      "id": "intro",
+      "title": "Enterprise Windows Fleet Monitoring Demands Native Service Architecture and Unattended MSI Deployment",
+      "summary": "Overview of Windows endpoint monitoring requirements, native service benefits, and MSI deployment strategy.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "resilience",
+      "title": "WMI Collectors and SQLite Offline Buffering Ensure Resilient Telemetry Without Data Loss",
+      "summary": "Details on agent collection, offline buffering, and cryptographic credential protection.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "wix_packaging",
+      "title": "WiX v4 Declarative Packaging Guarantees Predictable Enterprise Installs and Upgrades",
+      "summary": "Explanation of WiX v4 declarative source, service registration, and upgrade handling.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "cicd_pipeline",
+      "title": "GitHub Actions Windows CI/CD Pipeline Automates Versioned Builds and Smoke Testing",
+      "summary": "Workflow for versioned builds, automated smoke testing, and artifact publishing.",
+      "image_plan": "Use a suitable image if needed"
+    }
+  ]
+}

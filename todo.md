@@ -1,24 +1,27 @@
-# SentinelPulse Final Delivery Todo
+# SentinelPulse Complete End-to-End Implementation Todo
 
-## Phase 1 & 2: Audit & Design
-- [x] Re-audit requirements: versioned MSI builder/downloader, retry/idempotent ingestion, CSV/PDF reports, real-time metrics feed, and reusable skill.
-- [ ] Document design specifications for versioned MSI bundles and export endpoints.
+## Phase 1: Backlog & Acceptance Criteria
+- [x] Audit missing platform modules and create verifiable remaining-work backlog.
 
-## Phase 3: Versioned MSI Build & Download Pipeline
-- [ ] Implement backend procedure/endpoint for building and downloading versioned agent MSI installers (`v2.4.1`, `v2.5.0`, etc.).
-- [ ] Add UI controls in the Enrollment / Agent Deploy page to select version, generate/compile MSI package, and download the binary artifact.
+## Phase 2: Schema & Backend Primitives
+- [ ] Expand database schema and tRPC procedures to support battery health, detailed network diagnostics, application usage, device health score, and device management (tags, departments, locations, asset IDs).
+- [x] Implement backend database query helpers for heartbeats, stale device detection, and alert rules.
 
-## Phase 4: Hardened Ingestion API (Retries & Idempotency)
-- [ ] Implement robust retry, exponential backoff, and idempotency key deduplication in ingestion handlers.
-- [ ] Add dead-letter queue and error observability logging for interrupted streams.
+## Phase 3: Agent Runtime & MSI Release Pipeline
+- [ ] Implement robust SQLite offline buffering and DPAPI encryption modules in the agent codebase.
+- [ ] Implement an authenticated backend endpoint that compiles and serves versioned MSI installers.
 
-## Phase 5: CSV/PDF Reports & Real-Time Agent Metrics Dashboard
-- [ ] Add CSV and formatted PDF report export functionality for fleet telemetry and active alerts.
-- [ ] Wire real-time WebSocket / SSE telemetry stream into the frontend dashboard for live CPU/RAM/process updates.
+## Phase 4: Durable Ingestion & Alert Engine
+- [ ] Implement durable ingestion handler with idempotency key deduplication, exponential backoff, dead-letter queue, and heartbeat tracking.
+- [ ] Implement automated alert evaluation worker for thresholds and check-in timeouts.
 
-## Phase 6: Reusable Skill Creation (`skill-creator`)
-- [x] Create a new reusable skill (`sentinelpulse-delivery`) using `skill-creator` instructions for end-to-end monitoring platforms and MSI packaging.
+## Phase 5: Dashboard Modules & Report Generation
+- [ ] Update frontend components and pages to render battery, network, app usage, health score, and device management attributes.
+- [ ] Implement true CSV and formatted PDF report export functionality for fleet telemetry and alerts.
 
-## Phase 7: Validation, Checkpoint & Delivery
-- [ ] Run TypeScript check, Vitest, build test, and visual verification.
-- [ ] Save final checkpoint and deliver complete results.
+## Phase 6: Integration, Migration & Build Validation
+- [ ] Run database migration SQL execution and verify Drizzle/SQL schema synchronization.
+- [ ] Run comprehensive unit and integration test suites, TypeScript checks, and production builds.
+
+## Phase 7: Checkpoint & Delivery
+- [ ] Save final project checkpoint and deliver implementation report.

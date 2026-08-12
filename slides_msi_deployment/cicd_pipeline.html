@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&family=Inter:wght@400&display=swap');
+      
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      .slide-container { 
+        width: 1280px; 
+        min-height: 720px; 
+        background: #F4F7FA; 
+        font-family: 'Inter', sans-serif;
+        color: #425466;
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        grid-template-rows: 100px 1fr 60px;
+      }
+      header {
+        grid-column: 1 / span 12;
+        padding-top: 40px;
+        padding-left: 80px;
+        padding-right: 80px;
+      }
+      h2 {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+        font-size: 32px;
+        color: #0A2540;
+        text-transform: uppercase;
+        border-bottom: 2px solid #0A2540;
+        padding-bottom: 10px;
+      }
+      main {
+        grid-column: 1 / span 12;
+        padding-top: 40px;
+        padding-left: 80px;
+        padding-right: 80px;
+      }
+      .content-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 30px;
+      }
+      .pipeline-viz {
+        grid-column: 1 / span 12;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 20px;
+        padding: 40px;
+        background: white;
+        border: 2px solid #0A2540;
+      }
+      .pipeline-step {
+        width: 200px;
+        height: 100px;
+        background: #0A2540;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        text-align: center;
+        padding: 10px;
+        position: relative;
+      }
+      .pipeline-step::after {
+        content: '\f061';
+        font-family: 'Font Awesome 5 Free';
+        font-weight: 900;
+        position: absolute;
+        right: -25px;
+        color: #0066FF;
+        font-size: 20px;
+      }
+      .pipeline-step:last-child::after {
+        display: none;
+      }
+      .pipeline-step.active {
+        background: #0066FF;
+      }
+      .details-grid {
+        grid-column: 1 / span 12;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin-top: 40px;
+      }
+      .detail-item {
+        border-top: 1px dashed #425466;
+        padding-top: 20px;
+      }
+      .detail-item h3 {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 18px;
+        color: #0066FF;
+        margin-bottom: 8px;
+      }
+      footer {
+        grid-column: 1 / span 12;
+        padding-left: 80px;
+        padding-right: 80px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        border-top: 1px dashed #425466;
+      }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <header>
+            <h2>GitHub Actions Windows CI/CD Pipeline</h2>
+        </header>
+        <main>
+            <div class="content-grid">
+                <div class="pipeline-viz">
+                    <div class="pipeline-step">DOTNET BUILD<br/>(RELEASE)</div>
+                    <div class="pipeline-step">OFFLINE UNIT<br/>TESTS</div>
+                    <div class="pipeline-step active">WIX MSI<br/>COMPILATION</div>
+                    <div class="pipeline-step">SMOKE TEST<br/>(INSTALL)</div>
+                    <div class="pipeline-step">RELEASE<br/>ARTIFACTS</div>
+                </div>
+                <div class="details-grid">
+                    <div class="detail-item">
+                        <h3>Automated Smoke Testing</h3>
+                        <p>Pipeline installs MSI on clean Windows runners, verifies service registration, and confirms clean uninstallation before publishing.</p>
+                    </div>
+                    <div class="detail-item">
+                        <h3>Versioned Release Assets</h3>
+                        <p>Tagged releases derive semantic versioning for MSI metadata and generate signed binaries ready for enterprise distribution.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <footer>
+            <span>SENTINELPULSE ARCHITECTURE</span>
+            <span>SLIDE 04</span>
+        </footer>
+    </div>
+</body>
+</html>
