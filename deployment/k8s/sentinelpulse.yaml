@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sentinelpulse
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinelpulse-backend
+  namespace: sentinelpulse
+  labels:
+    app: sentinelpulse-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sentinelpulse-backend
+  template:
+    metadata:
+      labels:
+        app: sentinelpulse-backend
+    spec:
+      containers:
+      - name: backend
+        image: sentinelpulse/backend:v2.4.1
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: sentinelpulse-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: sentinelpulse-secrets
+              key: redis-url
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: sentinelpulse-secrets
+              key: jwt-secret
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: "250m"
+            memory: 256Mi
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentinelpulse-backend-svc
+  namespace: sentinelpulse
+spec:
+  selector:
+    app: sentinelpulse-backend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: ClusterIP

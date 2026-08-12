@@ -123,7 +123,7 @@ export const appRouter = router({
       const filePath = generatePdfReport(endpoints, alerts, telemetry);
       return { success: true, format: 'pdf' as const, downloadUrl: `/exports/${path.basename(filePath)}` };
     }),
-    buildMsi: protectedProcedure.input(z.object({ version: z.string().regex(/^\\d+\\.\\d+\\.\\d+([.-][0-9A-Za-z.-]+)?$/) })).mutation(async ({ input }) => {
+    buildMsi: protectedProcedure.input(z.object({ version: z.string().regex(/^\d+\.\d+\.\d+([.-][0-9A-Za-z.-]+)?$/, "Invalid semver version format") })).mutation(async ({ input }) => {
       return buildVersionedMsi(input.version);
     }),
   }),

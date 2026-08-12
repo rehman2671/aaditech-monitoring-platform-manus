@@ -6,8 +6,8 @@
 - [x] Phase 3: Redis Streams & Workers (Producer, consumer group, persistence worker, alert rules, heartbeat checks)
 - [x] Phase 4: Real .NET Agent & Offline Buffer (WMI/CIM collectors, DPAPI encryption, SQLite offline queue, retry backoff, WiX MSI)
 - [ ] Phase 5: Dashboard Integration (Remove preview fallbacks, connect UI to canonical Go API, secure realtime and exports)
-- [ ] Phase 6: Packaging, Deployment & CI/CD (Docker Compose, Kubernetes manifests, GitHub Actions CI workflow with matrix)
-- [ ] Phase 7: Acceptance Validation (End-to-end tests, security scans, compliance verification)
+- [x] Phase 6: Packaging, Deployment & CI/CD (Docker Compose, Kubernetes manifests, GitHub Actions CI workflow with matrix)
+- [x] Phase 7: Acceptance Validation (End-to-end tests, security scans, compliance verification)
 - [x] Phase 1 Subtask: Implement robust JWT/token verification with fail-closed authentication
 - [x] Phase 1 Subtask: Enforce mandatory tenant derivation from authenticated session context
 - [x] Phase 1 Subtask: Implement persistent audit log storage and query handlers
