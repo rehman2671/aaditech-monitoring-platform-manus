@@ -7,6 +7,8 @@ type ExtendedEndpoint = Endpoint & {
   battery?: BatteryInfo;
   networkAdapters?: NetworkAdapterInfo[];
   healthScore?: number;
+  metadata?: { department?: string; location?: string; assignedUser?: string; assetId?: string; tags?: string; maintenanceMode?: boolean };
+  applicationUsage?: { appName: string; activeSeconds: number; cpuTimeSeconds: number; networkBytes?: number; launchCount: number; lastUsedAt: string }[];
 };
 
 export default function ExtendedTelemetryPanel({ endpoint }: { endpoint: ExtendedEndpoint }) {
@@ -64,6 +66,23 @@ export default function ExtendedTelemetryPanel({ endpoint }: { endpoint: Extende
           ) : <p className="mt-4 text-xs text-slate-500">No peripheral inventory received from the agent.</p>}
         </section>
       </div>
+
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <h4 className="text-sm font-bold text-white mb-4">Device Management</h4>
+          <div className="grid grid-cols-2 gap-3 text-xs font-mono text-slate-300">
+            <p>Asset ID: <span className="text-white">{endpoint.metadata?.assetId ?? 'Unassigned'}</span></p>
+            <p>Owner: <span className="text-white">{endpoint.metadata?.assignedUser ?? 'Unassigned'}</span></p>
+            <p>Department: <span className="text-white">{endpoint.metadata?.department ?? 'Unassigned'}</span></p>
+            <p>Location: <span className="text-white">{endpoint.metadata?.location ?? 'Unassigned'}</span></p>
+          </div>
+          <p className="mt-3 text-xs text-slate-500">Tags: {endpoint.metadata?.tags ?? 'No tags'} · Maintenance: {endpoint.metadata?.maintenanceMode ? 'ON' : 'OFF'}</p>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <h4 className="text-sm font-bold text-white mb-4">Application Usage</h4>
+          {endpoint.applicationUsage?.length ? <div className="space-y-2 text-xs font-mono text-slate-300">{endpoint.applicationUsage.slice(0, 4).map(app => <p key={app.appName} className="flex justify-between"><span>{app.appName}</span><span>{Math.round(app.activeSeconds / 60)}m active · {app.launchCount} launches</span></p>)}</div> : <p className="text-xs text-slate-500">No usage telemetry received from the agent.</p>}
+        </div>
+      </section>
 
       <section className="bg-slate-900 border border-slate-800 rounded-xl p-5">
         <h4 className="text-sm font-bold text-white flex items-center gap-2"><HardDrive className="w-4 h-4 text-cyan-400" /> Extended Disk Inventory</h4>

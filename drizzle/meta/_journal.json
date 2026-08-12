@@ -8,6 +8,13 @@
       "when": 1786497122582,
       "tag": "0000_round_violations",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1786553430575,
+      "tag": "0001_glamorous_the_hand",
+      "breakpoints": true
     }
   ]
 }

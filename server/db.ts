@@ -91,7 +91,7 @@ export async function getUserByOpenId(openId: string) {
 
 // TODO: add feature queries here as your schema grows.
 
-import { endpoints, alertRules, systemAlerts, enrollmentTokens } from "../drizzle/schema";
+import { endpoints, alertRules, systemAlerts, enrollmentTokens, endpointMetadata, batteryTelemetry, networkTelemetry, appUsageTelemetry } from "../drizzle/schema";
 
 export async function getEndpoints(orgId = 'org-enterprise-01') {
   const db = await getDb();
@@ -130,4 +130,36 @@ export async function getStaleEndpoints(thresholdMinutes = 15) {
   if (!db) return [];
   const cutoff = new Date(Date.now() - thresholdMinutes * 60 * 1000);
   return await db.select().from(endpoints).where(sql`lastSeenAt < ${cutoff} AND status = 'online'`);
+}
+
+export async function getEndpointMetadata(endpointId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(endpointMetadata).where(eq(endpointMetadata.endpointId, endpointId)).limit(1);
+  return rows[0];
+}
+
+export async function getLatestBatteryTelemetry(endpointId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(batteryTelemetry).where(eq(batteryTelemetry.endpointId, endpointId)).orderBy(sql`capturedAt DESC`).limit(1);
+  return rows[0];
+}
+
+export async function getLatestNetworkTelemetry(endpointId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(networkTelemetry).where(eq(networkTelemetry.endpointId, endpointId)).orderBy(sql`capturedAt DESC`).limit(10);
+}
+
+export async function getApplicationUsage(endpointId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(appUsageTelemetry).where(eq(appUsageTelemetry.endpointId, endpointId)).orderBy(sql`lastUsedAt DESC`).limit(100);
+}
+
+export async function recordEndpointMetadata(endpointId: string, values: Partial<typeof endpointMetadata.$inferInsert>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(endpointMetadata).values({ endpointId, ...values }).onDuplicateKeyUpdate({ set: values });
 }

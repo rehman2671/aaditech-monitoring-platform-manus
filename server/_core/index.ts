@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import path from "node:path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
@@ -38,6 +39,9 @@ async function startServer() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
   registerRealtimeRoutes(app);
+  const publicRoot = process.env.NODE_ENV === "production" ? path.join(process.cwd(), "dist", "public") : path.join(process.cwd(), "public");
+  app.use("/exports", express.static(path.join(publicRoot, "exports"), { fallthrough: false, maxAge: "1h" }));
+  app.use("/artifacts", express.static(path.join(process.cwd(), "artifacts"), { fallthrough: false, maxAge: "1h" }));
   // tRPC API
   app.use(
     "/api/trpc",

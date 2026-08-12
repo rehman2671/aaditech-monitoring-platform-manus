@@ -345,6 +345,8 @@ const extendedPreviewEndpoints = initialEndpoints as Array<Endpoint & {
   battery: BatteryInfo;
   networkAdapters: NetworkAdapterInfo[];
   healthScore: number;
+  metadata: { department?: string; location?: string; assignedUser?: string; assetId?: string; tags?: string; maintenanceMode?: boolean };
+  applicationUsage: { appName: string; activeSeconds: number; cpuTimeSeconds: number; networkBytes?: number; launchCount: number; lastUsedAt: string }[];
 }>;
 
 extendedPreviewEndpoints.forEach((endpoint, index) => {
@@ -387,4 +389,17 @@ extendedPreviewEndpoints.forEach((endpoint, index) => {
     vpnActive: index % 3 === 0,
   }];
   endpoint.healthScore = 92 - index * 5;
+  endpoint.metadata = {
+    department: index % 2 === 0 ? 'Engineering' : 'Finance',
+    location: index % 2 === 0 ? 'Bengaluru HQ' : 'London Office',
+    assignedUser: index === 0 ? 'Aarav Mehta' : undefined,
+    assetId: `SP-ASSET-${1024 + index}`,
+    tags: index % 2 === 0 ? 'priority,developer' : 'finance,managed',
+    maintenanceMode: false,
+  };
+  endpoint.applicationUsage = [
+    { appName: 'Chrome', activeSeconds: 19200 - index * 600, cpuTimeSeconds: 4320, networkBytes: 2_400_000_000, launchCount: 18 - index, lastUsedAt: new Date(Date.now() - 120000).toISOString() },
+    { appName: 'VS Code', activeSeconds: 14400 - index * 420, cpuTimeSeconds: 3480, networkBytes: 450_000_000, launchCount: 7, lastUsedAt: new Date(Date.now() - 480000).toISOString() },
+    { appName: 'Microsoft Teams', activeSeconds: 9000, cpuTimeSeconds: 2100, networkBytes: 1_800_000_000, launchCount: 5, lastUsedAt: new Date(Date.now() - 900000).toISOString() },
+  ];
 });

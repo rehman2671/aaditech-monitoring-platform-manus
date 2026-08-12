@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import type { AuthUser, RealtimeEvent } from '../types';
 import { RealtimeClient, type RealtimeStatus } from '../lib/realtime';
+import { trpc } from '@/lib/trpc';
 
 /** Precision Enterprise Glass: Plus Jakarta Sans leads; mono is reserved for transport and identity telemetry. */
 interface HeaderProps {
@@ -22,6 +23,19 @@ export default function Header({ onSearchChange, searchQuery, isLiveStreaming, o
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [transportStatus, setTransportStatus] = useState<RealtimeStatus>('closed');
+  const csvReport = trpc.reports.exportCsv.useQuery(undefined, { enabled: false });
+  const pdfReport = trpc.reports.exportPdf.useQuery(undefined, { enabled: false });
+
+  const downloadReport = async (report: { refetch: () => Promise<{ data?: { downloadUrl?: string } }> }, label: string) => {
+    const result = await report.refetch();
+    if (!result.data?.downloadUrl) throw new Error(`${label} report did not return a download URL`);
+    const anchor = document.createElement('a');
+    anchor.href = result.data.downloadUrl;
+    anchor.download = '';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  };
 
   useEffect(() => {
     if (!isLiveStreaming) {
@@ -68,7 +82,7 @@ export default function Header({ onSearchChange, searchQuery, isLiveStreaming, o
           <Button
             variant="outline"
             size="sm"
-            onClick={() => toast.success('Fleet Report Generated', { description: 'CSV export of 5 endpoints is downloading.' })}
+            onClick={() => toast.promise(downloadReport(csvReport, 'CSV'), { loading: 'Generating CSV report...', success: 'CSV Report Ready', error: 'CSV report generation failed' })}
             className="bg-slate-800/40 border-slate-800 text-slate-400 hover:text-white h-8 text-[10px] uppercase font-bold tracking-wider"
           >
             CSV
@@ -76,10 +90,10 @@ export default function Header({ onSearchChange, searchQuery, isLiveStreaming, o
           <Button
             variant="outline"
             size="sm"
-            onClick={() => toast.promise(new Promise(r => setTimeout(r, 1500)), {
+            onClick={() => toast.promise(downloadReport(pdfReport, 'PDF'), {
               loading: 'Generating PDF diagnostic report...',
               success: 'PDF Report Ready',
-              error: 'Report generation failed',
+              error: 'PDF report generation failed',
             })}
             className="bg-slate-800/40 border-slate-800 text-slate-400 hover:text-white h-8 text-[10px] uppercase font-bold tracking-wider"
           >
