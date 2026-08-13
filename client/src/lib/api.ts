@@ -46,6 +46,13 @@ async function request<T>(path: string, init: RequestInit = {}, accessToken?: st
 export const api = {
   login: (email: string, password: string) =>
     request<AuthSession>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  createEnrollmentToken: (accessToken: string) =>
+    request<{ enrollment_token: string; expires_at: string; organization_id: string }>('/enrollment-tokens', { method: 'POST' }, accessToken),
+  requestEndpointRefresh: (accessToken: string, endpointId: string, modules: string[]) =>
+    request<Record<string, unknown>>(`/endpoints/${encodeURIComponent(endpointId)}/command`, {
+      method: 'POST',
+      body: JSON.stringify({ command_type: 'REFRESH', payload: JSON.stringify({ modules }) }),
+    }, accessToken),
   refresh: () => request<AuthSession>('/auth/refresh', { method: 'POST' }),
   summary: (token: string) => request<DashboardSummary>('/dashboard/summary', {}, token),
   endpoints: (token: string, query = '') => request<Endpoint[]>(`/endpoints${query}`, {}, token),

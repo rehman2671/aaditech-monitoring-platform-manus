@@ -90,3 +90,11 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 
 ## Local Go backend and tRPC compatibility — 2026-08-14
 - [x] Prevent the OAuth/tRPC client from issuing unsupported `/api/trpc/auth.me` requests during local username/password setup by disabling the OAuth auth query in the local Go-backed App runtime.
+
+## Local dashboard REST/runtime compatibility — 2026-08-14
+- [x] Stop token generation and refresh actions from calling unsupported `/api/trpc/monitoring.*` endpoints in the local Go-backed Docker runtime; token generation now uses `/api/v1/enrollment-tokens`, and refresh commands use the Go endpoint-command REST route.
+- [x] Replace or disable the unsupported `/api/realtime/stream` connection in local Go mode so it does not produce 404s; SSE is now disabled when `VITE_LOCAL_GO_API` is not explicitly `false`.
+- [x] Rebuild the existing `deployment` frontend and verify the affected local REST routes remain healthy after the change; the frontend rebuild completed successfully and `setup-status` continues to return HTTP 200 through port 3001.
+
+## Test validation follow-up — 2026-08-14
+- [x] Isolate and document the `server/monitoring.test.ts` dashboard-summary timeout without regressing the local REST compatibility fixes; the first run had one 5-second timeout, and a targeted rerun completed all 4 monitoring tests successfully in 3.59 seconds. The earlier root cause remains unconfirmed, so no stronger cause is asserted.

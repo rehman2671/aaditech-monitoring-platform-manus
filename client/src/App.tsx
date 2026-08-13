@@ -20,6 +20,7 @@ import NotFound from './pages/NotFound';
 import type { AuthSession, Endpoint, AlertRule, SystemAlert, EnrollmentToken, RealtimeEvent } from './types';
 import { toast } from 'sonner';
 import { SseRealtimeClient } from '@/lib/sseRealtime';
+import { api } from '@/lib/api';
 
 /** Precision Enterprise Glass: persistent control shell, typed transport seams, and role-aware operator actions. */
 export default function App() {
@@ -34,16 +35,9 @@ export default function App() {
     onSuccess: () => { void trpcUtils.monitoring.systemAlerts.invalidate(); },
     onError: error => toast.error('Alert acknowledgement failed', { description: error.message }),
   });
-  const generateTokenMutation = trpc.monitoring.generateToken.useMutation({
-    onSuccess: () => { void trpcUtils.monitoring.enrollmentTokens.invalidate(); },
-    onError: error => toast.error('Enrollment token generation failed', { description: error.message }),
-  });
   const setAlertRuleEnabledMutation = trpc.monitoring.setAlertRuleEnabled.useMutation({
     onSuccess: () => { void trpcUtils.monitoring.alertRules.invalidate(); },
     onError: error => toast.error('Alert rule update failed', { description: error.message }),
-  });
-  const requestRefreshMutation = trpc.monitoring.requestRefresh.useMutation({
-    onError: error => toast.error('Refresh request failed', { description: error.message }),
   });
   const [session, setSession] = useState<AuthSession | null>(null);
   const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
@@ -189,7 +183,11 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!session || typeof window === 'undefined') return;
+    // The local Docker stack serves the canonical Go REST API; it does not expose
+    // the separate Node/tRPC realtime stream. Keep SSE disabled in this runtime
+    // instead of repeatedly opening a known 404 endpoint.
+    const localGoRuntime = import.meta.env.VITE_LOCAL_GO_API !== 'false';
+    if (localGoRuntime || !session || typeof window === 'undefined') return;
     const client = new SseRealtimeClient({
       url: `${window.location.origin}/api/realtime/stream`,
       onEvent: handleRealtimeEvent,
@@ -219,19 +217,46 @@ export default function App() {
     void setAlertRuleEnabledMutation.mutateAsync({ ruleId, enabled: !rule.enabled });
   };
 
-  const handleCreateToken = () => {
-    if (!isAdmin) {
+  const handleCreateToken = async () => {
+    if (!isAdmin || !session) {
       toast.error('Admin role required', { description: 'Only admins can issue enrollment tokens.' });
       return;
     }
-    void generateTokenMutation.mutateAsync();
+    try {
+      const result = await api.createEnrollmentToken(session.accessToken);
+      setTokens(prev => [{
+        id: crypto.randomUUID(),
+        tokenHash: 'sha256-generated',
+        plainToken: result.enrollment_token,
+        expiresAt: result.expires_at,
+        createdAt: new Date().toISOString(),
+      }, ...prev]);
+      toast.success('Enrollment token generated successfully', { description: 'Copy it now; the plaintext token is shown only once.' });
+    } catch (error) {
+      toast.error('Enrollment token generation failed', { description: error instanceof Error ? error.message : 'The backend rejected the request.' });
+    }
   };
 
   const handleTriggerGlobalRefresh = async () => {
-    await requestRefreshMutation.mutateAsync({ endpointId: undefined, modules: ['performance', 'hardware', 'os_health'] });
+    if (!session || endpoints.length === 0) {
+      toast.info('No enrolled endpoints are available for refresh.');
+      return;
+    }
+    try {
+      await Promise.all(endpoints.map(endpoint => api.requestEndpointRefresh(session.accessToken, endpoint.id, ['performance', 'hardware', 'os_health'])));
+      toast.success('Refresh command queued for all enrolled endpoints.');
+    } catch (error) {
+      toast.error('Refresh request failed', { description: error instanceof Error ? error.message : 'The backend rejected the refresh command.' });
+    }
   };
   const handleTriggerOnDemandRefresh = async (endpointId: string) => {
-    await requestRefreshMutation.mutateAsync({ endpointId, modules: ['performance', 'hardware', 'os_health', 'event_logs'] });
+    if (!session) return;
+    try {
+      await api.requestEndpointRefresh(session.accessToken, endpointId, ['performance', 'hardware', 'os_health', 'event_logs']);
+      toast.success('On-demand refresh command queued.');
+    } catch (error) {
+      toast.error('Refresh request failed', { description: error instanceof Error ? error.message : 'The backend rejected the refresh command.' });
+    }
   };
 
   const exportFleet = () => {

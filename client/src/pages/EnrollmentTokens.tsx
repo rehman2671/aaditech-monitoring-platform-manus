@@ -3,7 +3,6 @@ import { EnrollmentToken } from '../types';
 import { KeyRound, Plus, Copy, Check, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { trpc } from '@/lib/trpc';
 
 interface EnrollmentTokensProps {
   tokens: EnrollmentToken[];
@@ -13,23 +12,13 @@ interface EnrollmentTokensProps {
 
 export default function EnrollmentTokens({ tokens, onCreateToken, canWrite }: EnrollmentTokensProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [agentVersion, setAgentVersion] = useState('2.4.1');
-  const buildMsiMutation = trpc.reports.buildMsi.useMutation({
-    onSuccess: result => {
-      if (result.status !== 'succeeded') {
-        toast.error('MSI build did not produce an artifact', { description: result.reason });
-        return;
-      }
-      const anchor = document.createElement('a');
-      anchor.href = `/artifacts/${result.artifactPath.split('/').pop()}`;
-      anchor.download = '';
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      toast.success(`MSI ${agentVersion} is ready`, { description: 'The versioned installer download has started.' });
-    },
-    onError: error => toast.error('MSI build failed', { description: error.message }),
-  });
+  const [agentVersion, setAgentVersion] = useState('2.4.2');
+
+  const handleBuildMsi = () => {
+    toast.info(`MSI ${agentVersion} is produced by the Windows CI/release pipeline`, {
+      description: 'The local Go deployment does not expose a tRPC MSI-build service. Use the versioned artifact from agent/artifacts.',
+    });
+  };
 
   const handleCopy = (tokenStr: string, id: string) => {
     navigator.clipboard.writeText(tokenStr);
@@ -50,17 +39,16 @@ export default function EnrollmentTokens({ tokens, onCreateToken, canWrite }: En
             <option value="2.5.0">Agent v2.5.0 (Beta)</option>
           </select>
           <Button
-            disabled={!canWrite || buildMsiMutation.isPending}
-            onClick={() => buildMsiMutation.mutate({ version: agentVersion })}
+            disabled={!canWrite}
+            onClick={handleBuildMsi}
             className="bg-slate-800 hover:bg-slate-700 text-white font-semibold gap-2 border border-slate-700"
           >
-            {buildMsiMutation.isPending ? 'Building MSI...' : 'Build & Download MSI'}
+            MSI via CI/CD
           </Button>
           <Button
             disabled={!canWrite}
             onClick={() => {
               onCreateToken();
-              if (canWrite) toast.success('New enrollment token generated successfully');
             }}
             title={canWrite ? 'Generate enrollment token' : 'Admin role required'}
             className="bg-blue-600 hover:bg-blue-500 text-white font-semibold gap-2 shadow-lg shadow-blue-900/20"
