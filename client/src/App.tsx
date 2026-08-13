@@ -15,6 +15,7 @@ import AlertsCenter from './pages/AlertsCenter';
 import EnrollmentTokens from './pages/EnrollmentTokens';
 import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
+import SetupPage from './pages/SetupPage';
 import NotFound from './pages/NotFound';
 import type { AuthSession, Endpoint, AlertRule, SystemAlert, EnrollmentToken, RealtimeEvent } from './types';
 import { toast } from 'sonner';
@@ -51,6 +52,25 @@ export default function App() {
   const [tokens, setTokens] = useState<EnrollmentToken[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLiveStreaming, setIsLiveStreaming] = useState(true);
+  const [setupComplete, setSetupComplete] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (setupComplete !== null) return;
+    let cancelled = false;
+    fetch('/api/v1/auth/setup-status')
+      .then(response => response.ok ? response.json() : Promise.reject(new Error('setup status unavailable')))
+      .then((data: { setup_complete?: boolean }) => {
+        if (cancelled) return;
+        const complete = Boolean(data.setup_complete);
+        setSetupComplete(complete);
+        if (complete) window.localStorage.setItem('sentinelpulse.setupComplete', 'true');
+        else window.localStorage.removeItem('sentinelpulse.setupComplete');
+      })
+      .catch(() => {
+        if (!cancelled) setSetupComplete(false);
+      });
+    return () => { cancelled = true; };
+  }, [setupComplete]);
 
   useEffect(() => {
     if (!auth.user) return;
@@ -153,6 +173,12 @@ export default function App() {
     navigate('/login');
   };
 
+  const handleSetupCompleted = () => {
+    window.localStorage.setItem('sentinelpulse.setupComplete', 'true');
+    setSetupComplete(true);
+    navigate('/login');
+  };
+
   const handleRealtimeEvent = (event: RealtimeEvent) => {
     if (event.type === 'endpoint_status_changed') {
       setEndpoints(prev => prev.map(endpoint => endpoint.id === event.endpointId ? { ...endpoint, status: event.status, lastSeenAt: event.lastSeenAt } : endpoint));
@@ -220,6 +246,14 @@ export default function App() {
     isAdmin: Boolean(isAdmin),
     userRole: session?.user.role ?? 'viewer',
   }), [endpoints, alertRules, systemAlerts, tokens, isAdmin, session?.user.role]);
+
+  if (setupComplete === null) {
+    return <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center font-mono text-sm">Checking platform setup...</div>;
+  }
+
+  if (!setupComplete) {
+    return <SetupPage onSetupCompleted={handleSetupCompleted} />;
+  }
 
   if (!session || location === '/login') {
     return <LoginPage onAuthenticated={signIn} />;

@@ -61,5 +61,17 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Ensure agents configured with the local IP and enrollment token successfully authenticate against the canonical Go backend.
 
 ## Remaining integration & setup refinement gaps — 2026-08-14
-- [ ] Wire the backend REST handlers for `/api/v1/auth/setup` and `/api/v1/auth/login`.
-- [ ] Complete the agent-backend endpoint URL alignment (`/api/v1/agents/enroll` vs `/api/v1/agent/enroll`).
+- [x] Wire the backend REST handlers for `/api/v1/auth/setup` and `/api/v1/auth/login`.
+- [x] Complete the agent-backend endpoint URL alignment (`/api/v1/agents/enroll` vs `/api/v1/agent/enroll`).
+
+## Frontend setup-first routing bug — 2026-08-14
+- [x] Wire `SetupPage` into the actual rendered `App.tsx` so first-run setup appears before the login page.
+- [x] Rebuild only the existing `deployment` frontend service and verify `http://localhost:3001` displays the setup wizard.
+
+## PostgreSQL SQL compatibility & runtime verification — 2026-08-14
+- [x] Update `auth_handler.go` SQL statements to PostgreSQL syntax ($1, $2 placeholders, `ON CONFLICT` instead of `INSERT IGNORE`, `SERIAL` / `BIGSERIAL`).
+- [x] Rebuild and restart the Go backend container, then verify setup status and login endpoints against TimescaleDB.
+
+## Live backend container rebuild & integration verification — 2026-08-14
+- [ ] Rebuild and restart the deployment backend container (`docker-compose -f deployment/docker-compose.yml up -d --build backend`).
+- [ ] Verify live endpoints `/api/v1/auth/setup-status` and `/api/v1/auth/setup` using `curl` or `Invoke-WebRequest`.

@@ -29,6 +29,12 @@ func NewServer(cfg *config.Config, db *sql.DB, rdb *redis.Client) *Server {
 func (s *Server) RegisterRoutes() http.Handler {
 	mux := http.NewServeMux()
 
+	// Setup & Authentication endpoints
+	authHandler := api.NewAuthHandler(s.db, s.cfg)
+	mux.HandleFunc("/api/v1/auth/setup-status", authHandler.HandleSetupStatus)
+	mux.HandleFunc("/api/v1/auth/setup", authHandler.HandleSetup)
+	mux.HandleFunc("/api/v1/auth/login", authHandler.HandleLogin)
+
 	// Health endpoints
 	mux.HandleFunc("/health/live", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -64,6 +70,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	// Enrollment
 	enrollmentHandler := api.NewEnrollmentHandler(s.db)
 	mux.HandleFunc("/api/v1/agents/enroll", enrollmentHandler.EnrollAgent)
+	mux.HandleFunc("/api/v1/agent/enroll", enrollmentHandler.EnrollAgent)
 	mux.Handle("/api/v1/enrollment-tokens", s.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims := r.Context().Value("claims").(*auth.Claims)
 		enrollmentHandler.CreateToken(w, r, claims)
