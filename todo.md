@@ -73,5 +73,13 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Rebuild and restart the Go backend container, then verify setup status and login endpoints against TimescaleDB.
 
 ## Live backend container rebuild & integration verification — 2026-08-14
-- [ ] Rebuild and restart the deployment backend container (`docker-compose -f deployment/docker-compose.yml up -d --build backend`).
-- [ ] Verify live endpoints `/api/v1/auth/setup-status` and `/api/v1/auth/setup` using `curl` or `Invoke-WebRequest`.
+- [x] Rebuild and restart the deployment backend container (`docker-compose -f deployment/docker-compose.yml up -d --build backend`).
+- [x] Verify live endpoints `/api/v1/auth/setup-status` and `/api/v1/auth/setup` using `curl` or `Invoke-WebRequest`.
+
+## Live backend endpoint runtime verification gaps — 2026-08-14
+- [x] Correctly copy updated Go source files into the connected Windows workspace build tree.
+- [x] Rebuild and verify live `/api/v1/auth/setup-status` returns `HTTP 200` without 404.
+
+## Workspace backend sync & live verification checklist — 2026-08-14
+- [ ] Confirm updated server.go and auth_handler.go exist inside the Windows workspace backend tree.
+- [ ] Verify live `/api/v1/auth/setup-status` returns HTTP 200 from the container.
