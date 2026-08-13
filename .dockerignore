@@ -1,0 +1,11 @@
+node_modules
+dist
+build
+.git
+.github
+agent/bin
+agent/obj
+agent/artifacts
+backend/go/bin
+*.log
+.DS_Store

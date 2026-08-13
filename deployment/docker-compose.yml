@@ -54,11 +54,11 @@ services:
 
   frontend:
     build:
-      context: ..
-      dockerfile: deployment/frontend.Dockerfile
+      context: .
+      dockerfile: frontend.Dockerfile
     container_name: sentinelpulse_frontend
     ports:
-      - "3000:80"
+      - "3001:80"
     depends_on:
       - backend
     restart: unless-stopped

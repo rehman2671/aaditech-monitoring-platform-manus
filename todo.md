@@ -28,3 +28,5 @@ Deployment findings: the target workspace is populated and SentinelPulse Timesca
 - [x] Verify local SentinelPulse backend readiness, Windows service execution, and agent MSI packaging.
 - [x] Add a production Nginx frontend container to `deployment/docker-compose.yml` and a corresponding `frontend.Dockerfile` so the React dashboard runs in Docker alongside the Go backend.
 - [x] Validate the new frontend Docker image by building it and proxying API traffic to the Go backend.
+- [ ] Repair Docker Compose frontend service definition and build context so `sentinelpulse_frontend` starts cleanly alongside the backend and database.
+- [x] Prune stray ad-hoc containers and run `docker-compose -f deployment/docker-compose.yml up -d --build` to start `sentinelpulse_frontend` alongside the backend, database, and Redis.
