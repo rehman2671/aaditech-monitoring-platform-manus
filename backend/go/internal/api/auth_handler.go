@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/sentinelpulse/backend/internal/auth"
@@ -19,128 +20,134 @@ func NewAuthHandler(db *sql.DB, cfg *config.Config) *AuthHandler {
 	return &AuthHandler{db: db, cfg: cfg}
 }
 
-func (h *AuthHandler) HandleSetupStatus(w http.ResponseWriter, r *http.Request) {
+func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(value)
+}
+
+func (h *AuthHandler) HandleSetupStatus(w http.ResponseWriter, r *http.Request) {
 	var count int
-	err := h.db.QueryRowContext(r.Context(), "SELECT COUNT(*) FROM users").Scan(&count)
-	if err != nil || count == 0 {
-		json.NewEncoder(w).Encode(map[string]bool{"setup_complete": false})
+	if err := h.db.QueryRowContext(r.Context(), "SELECT COUNT(*) FROM users").Scan(&count); err != nil {
+		writeJSON(w, http.StatusOK, map[string]bool{"setup_complete": false})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]bool{"setup_complete": true})
+	writeJSON(w, http.StatusOK, map[string]bool{"setup_complete": count > 0})
 }
 
 func (h *AuthHandler) HandleSetup(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		return
 	}
 
 	var req struct {
 		CompanyName   string `json:"company_name"`
-		LocalIp       string `json:"local_ip"`
+		LocalIP       string `json:"local_ip"`
 		AdminEmail    string `json:"admin_email"`
 		AdminPassword string `json:"admin_password"`
 	}
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "BAD_REQUEST", "message": "Invalid request body"}})
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "BAD_REQUEST", "message": "Invalid request body"}})
+		return
+	}
+	if strings.TrimSpace(req.CompanyName) == "" || strings.TrimSpace(req.AdminEmail) == "" || len(req.AdminPassword) < 8 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "VALIDATION_ERROR", "message": "Company name, username/email, and password of at least 8 characters are required"}})
 		return
 	}
 
-	if req.CompanyName == "" || req.AdminEmail == "" || len(req.AdminPassword) < 8 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "VALIDATION_ERROR", "message": "Company name, valid email, and password (min 8 chars) are required"}})
+	var existing int
+	if err := h.db.QueryRowContext(r.Context(), "SELECT COUNT(*) FROM users").Scan(&existing); err == nil && existing > 0 {
+		writeJSON(w, http.StatusConflict, map[string]any{"error": map[string]string{"code": "SETUP_COMPLETE", "message": "Platform setup has already been completed"}})
 		return
 	}
 
 	ctx := r.Context()
-	orgID := "org-" + time.Now().Format("20060102150405")
-
-	_, _ = h.db.ExecContext(ctx, "INSERT INTO organizations (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING", orgID, req.CompanyName)
-	_, _ = h.db.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS platform_settings (id SERIAL PRIMARY KEY, company_name VARCHAR(255) NOT NULL, local_ip VARCHAR(255) NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
-	_, _ = h.db.ExecContext(ctx, "INSERT INTO platform_settings (company_name, local_ip) VALUES ($1, $2)", req.CompanyName, req.LocalIp)
-
-	pwdHash, err := auth.HashPassword(req.AdminPassword)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "HASH_ERROR", "message": "Failed to hash password"}})
+	if _, err := h.db.ExecContext(ctx, "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)"); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": map[string]string{"code": "DB_ERROR", "message": "Unable to prepare user credentials"}})
+		return
+	}
+	if _, err := h.db.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS platform_settings (id SERIAL PRIMARY KEY, company_name VARCHAR(255) NOT NULL, local_ip VARCHAR(255) NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())"); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": map[string]string{"code": "DB_ERROR", "message": "Unable to prepare platform settings"}})
 		return
 	}
 
-	openID := "admin-" + time.Now().Format("20060102150405")
-	_, err = h.db.ExecContext(ctx, "INSERT INTO users (open_id, email, name, role, password_hash) VALUES ($1, $2, $3, 'admin', $4) ON CONFLICT (open_id) DO UPDATE SET password_hash = $4, role = 'admin'", openID, req.AdminEmail, "Enterprise Admin", pwdHash)
+	passwordHash, err := auth.HashPassword(req.AdminPassword)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "DB_ERROR", "message": err.Error()}})
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": map[string]string{"code": "HASH_ERROR", "message": "Unable to secure administrator password"}})
 		return
 	}
+	orgID := "org-" + time.Now().UTC().Format("20060102150405.000000000")
+	openID := "local-" + strings.ToLower(strings.ReplaceAll(req.AdminEmail, "@", "-at-"))
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]any{"success": true, "organization_id": orgID})
+	transaction, err := h.db.BeginTx(ctx, nil)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": map[string]string{"code": "DB_ERROR", "message": "Unable to start setup transaction"}})
+		return
+	}
+	rollback := func() { _ = transaction.Rollback() }
+	if _, err = transaction.ExecContext(ctx, "INSERT INTO organizations (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING", orgID, strings.TrimSpace(req.CompanyName)); err != nil {
+		rollback()
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": map[string]string{"code": "DB_ERROR", "message": "Unable to create organization"}})
+		return
+	}
+	if _, err = transaction.ExecContext(ctx, "INSERT INTO platform_settings (company_name, local_ip) VALUES ($1, $2)", strings.TrimSpace(req.CompanyName), strings.TrimSpace(req.LocalIP)); err != nil {
+		rollback()
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": map[string]string{"code": "DB_ERROR", "message": "Unable to save platform settings"}})
+		return
+	}
+	if _, err = transaction.ExecContext(ctx, "INSERT INTO users (open_id, email, name, role, password_hash) VALUES ($1, $2, $3, 'admin', $4)", openID, strings.TrimSpace(req.AdminEmail), "Platform Administrator", passwordHash); err != nil {
+		rollback()
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": map[string]string{"code": "DB_ERROR", "message": "Unable to create administrator account"}})
+		return
+	}
+	var userID int
+	if err = transaction.QueryRowContext(ctx, "SELECT id FROM users WHERE open_id = $1", openID).Scan(&userID); err != nil {
+		rollback()
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": map[string]string{"code": "DB_ERROR", "message": "Unable to resolve administrator account"}})
+		return
+	}
+	if _, err = transaction.ExecContext(ctx, "INSERT INTO memberships (user_id, organization_id, role) VALUES ($1, $2, 'admin')", userID, orgID); err != nil {
+		rollback()
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": map[string]string{"code": "DB_ERROR", "message": "Unable to link administrator to organization"}})
+		return
+	}
+	if err = transaction.Commit(); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": map[string]string{"code": "DB_ERROR", "message": "Unable to commit platform setup"}})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true, "organization_id": orgID})
 }
 
 func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		return
 	}
-
 	var req struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "BAD_REQUEST", "message": "Invalid login payload"}})
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "BAD_REQUEST", "message": "Invalid login payload"}})
 		return
 	}
-
-	var userID int
-	var email string
-	var role string
-	var passwordHash sql.NullString
-
-	err := h.db.QueryRowContext(r.Context(), "SELECT id, email, role, password_hash FROM users WHERE email = $1 OR open_id = $1", req.Email).Scan(&userID, &email, &role, &passwordHash)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "UNAUTHORIZED", "message": "Invalid credentials"}})
+	var id int
+	var email, role, hash, orgID string
+	err := h.db.QueryRowContext(r.Context(), "SELECT u.id, u.email, u.role, u.password_hash, m.organization_id FROM users u LEFT JOIN memberships m ON m.user_id = u.id WHERE u.email = $1 OR u.open_id = $1 LIMIT 1", req.Email).Scan(&id, &email, &role, &hash, &orgID)
+	if err != nil || !auth.CheckPassword(req.Password, hash) {
+		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": map[string]string{"code": "UNAUTHORIZED", "message": "Invalid credentials"}})
 		return
 	}
-
-	if passwordHash.Valid && passwordHash.String != "" {
-		if !auth.CheckPassword(req.Password, passwordHash.String) {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "UNAUTHORIZED", "message": "Invalid credentials"}})
-			return
-		}
+	var token string
+	if h.cfg.JwtPrivateKeyRS256 != "" && h.cfg.JwtPublicKeyRS256 != "" {
+		token, err = auth.GenerateTokenRS256(id, email, orgID, role, h.cfg.JwtPrivateKeyRS256, 15*time.Minute)
 	} else {
-		if req.Password != "password123" && req.Password != "Admin@123!" {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "UNAUTHORIZED", "message": "Invalid credentials"}})
-			return
-		}
+		token, err = auth.GenerateToken(id, email, orgID, role, h.cfg.JwtSecret, 15*time.Minute)
 	}
-
-	token, err := auth.GenerateToken(userID, email, "org-enterprise-01", role, h.cfg.JwtSecret, 15*time.Minute)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "TOKEN_ERROR", "message": "Failed to generate access token"}})
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": map[string]string{"code": "TOKEN_ERROR", "message": "Unable to issue access token"}})
 		return
 	}
-
-	json.NewEncoder(w).Encode(map[string]any{
-		"accessToken": token,
-		"expiresAt":   time.Now().Add(15 * time.Minute).Format(time.RFC3339),
-		"user": map[string]any{
-			"id":             userID,
-			"email":          email,
-			"role":           role,
-			"organizationId": "org-enterprise-01",
-		},
-	})
+	writeJSON(w, http.StatusOK, map[string]any{"accessToken": token, "expiresAt": time.Now().UTC().Add(15 * time.Minute).Format(time.RFC3339), "user": map[string]any{"id": id, "email": email, "role": role, "organizationId": orgID}})
 }

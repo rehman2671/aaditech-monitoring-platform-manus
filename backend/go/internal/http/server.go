@@ -29,7 +29,7 @@ func NewServer(cfg *config.Config, db *sql.DB, rdb *redis.Client) *Server {
 func (s *Server) RegisterRoutes() http.Handler {
 	mux := http.NewServeMux()
 
-	// Setup & Authentication endpoints
+	// First-run setup and local operator authentication.
 	authHandler := api.NewAuthHandler(s.db, s.cfg)
 	mux.HandleFunc("/api/v1/auth/setup-status", authHandler.HandleSetupStatus)
 	mux.HandleFunc("/api/v1/auth/setup", authHandler.HandleSetup)
@@ -113,6 +113,15 @@ func (s *Server) RegisterRoutes() http.Handler {
 	// Admin Retention Purge Route (Admin RBAC required)
 	mux.Handle("/api/v1/admin/retention/purge", s.requireAuth(http.HandlerFunc(api.HandleAdminRetentionPurge(s.db))))
 
+	// Windows MSI builder and signed artifact workflow.
+	msiBuilder := api.NewMSIBuildHandler(s.db, s.cfg.MSIArtifactDir, s.cfg.MSIBuilderKey)
+	mux.Handle("/api/v1/admin/msi-builder/status", s.requireAuth(http.HandlerFunc(msiBuilder.AdminStatus)))
+	mux.Handle("/api/v1/admin/msi-builds", s.requireAuth(http.HandlerFunc(msiBuilder.ListOrCreate)))
+	mux.Handle("/api/v1/admin/msi-builds/", s.requireAuth(http.HandlerFunc(msiBuilder.Detail)))
+	mux.HandleFunc("/api/v1/internal/msi-builder/heartbeat", msiBuilder.InternalHeartbeat)
+	mux.HandleFunc("/api/v1/internal/msi-builder/next", msiBuilder.InternalNext)
+	mux.HandleFunc("/api/v1/internal/msi-builder/status", msiBuilder.InternalStatus)
+
 	return mux
 }
 
@@ -125,7 +134,13 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 		}
 
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-		claims, err := auth.ValidateToken(tokenStr, s.cfg.JwtSecret)
+		var claims *auth.Claims
+		var err error
+		if s.cfg.JwtPrivateKeyRS256 != "" && s.cfg.JwtPublicKeyRS256 != "" {
+			claims, err = auth.ValidateTokenRS256(tokenStr, s.cfg.JwtPublicKeyRS256)
+		} else {
+			claims, err = auth.ValidateToken(tokenStr, s.cfg.JwtSecret)
+		}
 		if err != nil {
 			http.Error(w, "Unauthorized: invalid token", http.StatusUnauthorized)
 			return

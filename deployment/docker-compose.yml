@@ -41,8 +41,14 @@ services:
     environment:
       - DATABASE_URL=postgres://sentinel:secure_postgres_password_change_me@postgres:5432/sentinelpulse?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
-      - JWT_SECRET=production_jwt_secret_change_me_32_bytes_min
+      - JWT_SECRET=${JWT_SECRET:-production_jwt_secret_change_me_32_bytes_min}
+      - JWT_PRIVATE_KEY_RS256=${JWT_PRIVATE_KEY_RS256:-}
+      - JWT_PUBLIC_KEY_RS256=${JWT_PUBLIC_KEY_RS256:-}
       - PORT=8080
+      - MSI_ARTIFACT_DIR=/var/lib/sentinelpulse/artifacts
+      - MSI_BUILDER_KEY=${MSI_BUILDER_KEY:-}
+    volumes:
+      - ../agent/artifacts:/var/lib/sentinelpulse/artifacts:ro
     ports:
       - "8080:8080"
     depends_on:

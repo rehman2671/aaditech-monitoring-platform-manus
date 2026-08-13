@@ -8,7 +8,6 @@ import path from "path";
 import crypto from "crypto";
 import { TRPCError } from "@trpc/server";
 import { calculateHealthScore } from "./healthScore";
-import { buildVersionedMsi } from "./msiBuild";
 import { broadcastRealtimeEvent } from './realtime';
 
 async function getReportInputs() {
@@ -123,8 +122,8 @@ export const appRouter = router({
       const filePath = generatePdfReport(endpoints, alerts, telemetry);
       return { success: true, format: 'pdf' as const, downloadUrl: `/exports/${path.basename(filePath)}` };
     }),
-    buildMsi: protectedProcedure.input(z.object({ version: z.string().regex(/^\d+\.\d+\.\d+([.-][0-9A-Za-z.-]+)?$/, "Invalid semver version format") })).mutation(async ({ input }) => {
-      return buildVersionedMsi(input.version);
+    buildMsi: protectedProcedure.input(z.object({ version: z.string().regex(/^\d+\.\d+\.\d+([.-][0-9A-Za-z.-]+)?$/, "Invalid semver version format") })).mutation(async () => {
+      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'MSI builds are handled by the authenticated Windows builder runner in the local Go deployment.' });
     }),
   }),
 });
@@ -140,12 +139,7 @@ export const reportRouter = router({
     const filePath = generateCsvReport(eps, alerts);
     return { success: true, downloadUrl: `/exports/${path.basename(filePath)}` };
   }),
-  buildMsi: protectedProcedure.input(z.object({ version: z.string() })).mutation(async ({ input }) => {
-    return { 
-      success: true, 
-      version: input.version, 
-      artifactUrl: `/artifacts/SentinelPulseAgent-${input.version}-x64.msi`,
-      sha256: crypto.randomBytes(32).toString('hex')
-    };
+  buildMsi: protectedProcedure.input(z.object({ version: z.string() })).mutation(async () => {
+    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'MSI builds are handled by the authenticated Windows builder runner in the local Go deployment.' });
   }),
 });

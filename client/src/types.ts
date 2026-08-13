@@ -184,6 +184,42 @@ export interface EnrollmentToken {
   createdAt: string;
 }
 
+export type MSISignMode = 'trusted' | 'self_signed_test' | 'unsigned_test';
+export type MSIBuildStatus = 'pending' | 'running' | 'succeeded' | 'failed';
+
+export interface MSIBuilderStatus {
+  available: boolean;
+  builderId?: string;
+  lastSeenAt?: string;
+  signingMode: MSISignMode | 'unconfigured';
+  certificateSubject?: string;
+  certificateThumbprint?: string;
+  certificateExpiresAt?: string;
+  certificateTrusted: boolean;
+  message: string;
+}
+
+export interface MSIBuildJob {
+  id: string;
+  organizationId: string;
+  agentVersion: string;
+  signMode: MSISignMode;
+  status: MSIBuildStatus;
+  errorMessage?: string;
+  artifactFilename?: string;
+  checksumFilename?: string;
+  sha256?: string;
+  isSigned: boolean;
+  certificateSubject?: string;
+  certificateThumbprint?: string;
+  certificateExpiresAt?: string;
+  certificateTrusted: boolean;
+  sizeBytes: number;
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+
 export interface ExtendedHardwareInfo extends HardwareInfo {
   cpuClockSpeedMhz: number;
   cpuTemperatureCelsius?: number;

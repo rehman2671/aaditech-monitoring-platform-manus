@@ -128,3 +128,17 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Run tests and local Windows smoke validation.
 - [x] Save final checkpoint after all items above are complete.
 
+
+## Manual Builder Key & MSI Download Repair — 2026-08-14
+- [ ] Investigate why the MSI download option was missing in the dashboard (verify API client mappings, job status rendering, and admin permissions).
+- [ ] Implement manual builder key configuration instructions so operators can set `MSI_BUILDER_KEY` directly in `deployment/.env`.
+- [ ] Ensure canonical workspace files match the connected Windows workspace MSI build/download UI and API code.
+- [ ] Rebuild and restart the container stack, then verify that the download action appears for completed builds.
+
+## RS256 JWT & PFX Signing Certificate Configuration — 2026-08-14
+- [x] Add support for `JWT_PRIVATE_KEY_RS256`, `JWT_PUBLIC_KEY_RS256`, `SIGNING_CERT_PFX_PATH`, and `SIGNING_CERT_PASSWORD` in backend config and Docker Compose.
+- [x] Configure the Windows runner and build script to accept PFX-based signing certificates securely.
+- [x] Validate fail-closed behavior when required PFX paths or RS256 keys are missing in production signing mode.
+- [x] Document manual key and certificate placement in `deployment/.env`.
+- [x] Preserve `SIGNING_CERT_PFX_PATH=/run/secrets/signing_cert.pfx` exactly as requested and validate the certificate is mounted or translated into a path accessible by the Windows signing runner; fail closed if it is not accessible.
+

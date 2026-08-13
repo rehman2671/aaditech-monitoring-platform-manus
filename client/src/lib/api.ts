@@ -4,10 +4,83 @@ import type {
   DashboardSummary,
   Endpoint,
   StandardErrorEnvelope,
+  MSIBuilderStatus,
+  MSIBuildJob,
+  MSISignMode,
 } from '../types';
 
 /** Precision Enterprise Glass: API boundaries remain crisp, typed, and operational. */
 export const API_BASE_URL = import.meta.env.VITE_PUBLIC_API_BASE_URL ?? '/api/v1';
+
+type BackendMSIBuilderStatus = {
+  available: boolean;
+  builder_id?: string;
+  last_seen_at?: string;
+  signing_mode: MSIBuilderStatus['signingMode'];
+  certificate_subject?: string;
+  certificate_thumbprint?: string;
+  certificate_expires_at?: string;
+  certificate_trusted: boolean;
+  message: string;
+};
+
+type BackendMSIBuildJob = {
+  id: string;
+  organization_id: string;
+  agent_version: string;
+  sign_mode: MSISignMode;
+  status: MSIBuildJob['status'];
+  error_message?: string;
+  artifact_filename?: string;
+  checksum_filename?: string;
+  sha256?: string;
+  is_signed: boolean;
+  certificate_subject?: string;
+  certificate_thumbprint?: string;
+  certificate_expires_at?: string;
+  certificate_trusted: boolean;
+  size_bytes: number;
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+};
+
+function mapMSIBuilderStatus(value: BackendMSIBuilderStatus): MSIBuilderStatus {
+  return {
+    available: value.available,
+    builderId: value.builder_id,
+    lastSeenAt: value.last_seen_at,
+    signingMode: value.signing_mode,
+    certificateSubject: value.certificate_subject,
+    certificateThumbprint: value.certificate_thumbprint,
+    certificateExpiresAt: value.certificate_expires_at,
+    certificateTrusted: value.certificate_trusted,
+    message: value.message,
+  };
+}
+
+function mapMSIBuildJob(value: BackendMSIBuildJob): MSIBuildJob {
+  return {
+    id: value.id,
+    organizationId: value.organization_id,
+    agentVersion: value.agent_version,
+    signMode: value.sign_mode,
+    status: value.status,
+    errorMessage: value.error_message,
+    artifactFilename: value.artifact_filename,
+    checksumFilename: value.checksum_filename,
+    sha256: value.sha256,
+    isSigned: value.is_signed,
+    certificateSubject: value.certificate_subject,
+    certificateThumbprint: value.certificate_thumbprint,
+    certificateExpiresAt: value.certificate_expires_at,
+    certificateTrusted: value.certificate_trusted,
+    sizeBytes: value.size_bytes,
+    createdAt: value.created_at,
+    startedAt: value.started_at,
+    completedAt: value.completed_at,
+  };
+}
 
 export class ApiError extends Error {
   status: number;
@@ -62,4 +135,32 @@ export const api = {
   ingest: (token: string, payload: ApiRequestEnvelope) =>
     request<{ received: boolean }>('/ingest', { method: 'POST', body: JSON.stringify(payload) }, token),
   exportEndpoints: (token: string) => request<Endpoint[]>('/export/endpoints', {}, token),
+  msiBuilderStatus: async (token: string) => mapMSIBuilderStatus(await request<BackendMSIBuilderStatus>('/admin/msi-builder/status', {}, token)),
+  listMSIBuilds: async (token: string) => (await request<BackendMSIBuildJob[]>('/admin/msi-builds', {}, token)).map(mapMSIBuildJob),
+  createMSIBuild: (token: string, agentVersion: string, signMode: MSISignMode) =>
+    request<{ job_id: string; status: string; message: string }>('/admin/msi-builds', {
+      method: 'POST',
+      body: JSON.stringify({ agent_version: agentVersion, sign_mode: signMode }),
+    }, token),
+  downloadMSI: async (token: string, jobId: string) => {
+    const response = await fetch(`${API_BASE_URL}/admin/msi-builds/${encodeURIComponent(jobId)}/download`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      const message = await response.text();
+      throw new ApiError(response.status, { error: { code: 'MSI_DOWNLOAD_FAILED', message: message || response.statusText } });
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || 'SentinelPulseAgent.msi';
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  },
 };

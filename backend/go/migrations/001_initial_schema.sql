@@ -107,3 +107,41 @@ CREATE TABLE IF NOT EXISTS endpoint_metrics_hyper (
 );
 
 SELECT create_hypertable('endpoint_metrics_hyper', 'captured_at', if_not_exists => TRUE);
+
+CREATE TABLE IF NOT EXISTS msi_builder_status (
+    id INT PRIMARY KEY CHECK (id = 1),
+    builder_id VARCHAR(128) NOT NULL,
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    signing_mode VARCHAR(32) NOT NULL DEFAULT 'unconfigured',
+    certificate_subject TEXT,
+    certificate_thumbprint VARCHAR(128),
+    certificate_expires_at TIMESTAMPTZ,
+    certificate_trusted BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS msi_build_jobs (
+    id VARCHAR(64) PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    requested_by INT REFERENCES users(id) ON DELETE SET NULL,
+    agent_version VARCHAR(64) NOT NULL,
+    sign_mode VARCHAR(32) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    error_message TEXT,
+    artifact_filename VARCHAR(255),
+    checksum_filename VARCHAR(255),
+    sha256 CHAR(64),
+    is_signed BOOLEAN NOT NULL DEFAULT FALSE,
+    certificate_subject TEXT,
+    certificate_thumbprint VARCHAR(128),
+    certificate_expires_at TIMESTAMPTZ,
+    certificate_trusted BOOLEAN NOT NULL DEFAULT FALSE,
+    size_bytes BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_msi_build_jobs_tenant_created
+    ON msi_build_jobs (tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_msi_build_jobs_pending
+    ON msi_build_jobs (status, created_at ASC);
