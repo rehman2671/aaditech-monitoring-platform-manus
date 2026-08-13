@@ -118,6 +118,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	mux.Handle("/api/v1/admin/msi-builder/status", s.requireAuth(http.HandlerFunc(msiBuilder.AdminStatus)))
 	mux.Handle("/api/v1/admin/msi-builds", s.requireAuth(http.HandlerFunc(msiBuilder.ListOrCreate)))
 	mux.Handle("/api/v1/admin/msi-builds/", s.requireAuth(http.HandlerFunc(msiBuilder.Detail)))
+	mux.Handle("/api/v1/admin/msi-latest/download", s.requireAuth(http.HandlerFunc(msiBuilder.DownloadLatest)))
 	mux.HandleFunc("/api/v1/internal/msi-builder/heartbeat", msiBuilder.InternalHeartbeat)
 	mux.HandleFunc("/api/v1/internal/msi-builder/next", msiBuilder.InternalNext)
 	mux.HandleFunc("/api/v1/internal/msi-builder/status", msiBuilder.InternalStatus)

@@ -142,3 +142,8 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Document manual key and certificate placement in `deployment/.env`.
 - [x] Preserve `SIGNING_CERT_PFX_PATH=/run/secrets/signing_cert.pfx` exactly as requested and validate the certificate is mounted or translated into a path accessible by the Windows signing runner; fail closed if it is not accessible.
 
+
+## Screenshot MSI Download Visibility Repair — 2026-08-14
+- [x] Redesign the EnrollmentTokens MSI card so a clear download/status box is always rendered even when the runner is offline or no jobs have been queued yet.
+- [x] Provide a direct fallback or manual installer instruction when the runner is offline so the operator is never left with a blank "No MSI builds have been queued" message.
+- [x] Rebuild and restart the container stack and verify the updated download guidance appears immediately in the live UI; frontend and backend returned HTTP 200, containers are running, and the production bundle contains the new download control.

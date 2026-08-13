@@ -211,6 +211,34 @@ func (h *MSIBuildHandler) Detail(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, job)
 }
 
+// DownloadLatest serves the newest MSI already present in the shared artifact directory.
+// It is separate from job downloads so an existing verified artifact remains
+// downloadable even when the job history is empty or was migrated.
+func (h *MSIBuildHandler) DownloadLatest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet { methodNotAllowed(w); return }
+	if !requireAdmin(w, r) { return }
+	entries, err := os.ReadDir(h.artifactDir)
+	if err != nil { http.Error(w, "MSI artifact directory is unavailable", http.StatusNotFound); return }
+	var newest os.FileInfo
+	var newestName string
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(strings.ToLower(entry.Name()), ".msi") { continue }
+		info, statErr := entry.Info()
+		if statErr != nil { continue }
+		if newest == nil || info.ModTime().After(newest.ModTime()) {
+			newest = info
+			newestName = filepath.Base(entry.Name())
+		}
+	}
+	if newest == nil { http.Error(w, "No compiled MSI artifact is available", http.StatusNotFound); return }
+	file, err := os.Open(filepath.Join(h.artifactDir, newestName))
+	if err != nil { http.Error(w, "MSI artifact is not present on the Windows host", http.StatusNotFound); return }
+	defer file.Close()
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, newestName))
+	http.ServeContent(w, r, newestName, newest.ModTime(), file)
+}
+
 func (h *MSIBuildHandler) download(w http.ResponseWriter, r *http.Request, jobID string) {
 	claims := claimsFromRequest(r)
 	job, err := h.getBuild(r, jobID, claims.OrganizationID)
@@ -389,12 +417,6 @@ func parseTime(value string) time.Time {
 func builderUnavailableMessage(key string) string {
 	if key == "" { return "Configure MSI_BUILDER_KEY and start the Windows build runner." }
 	return "Windows build runner has not sent a heartbeat yet."
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
 }
 
 func methodNotAllowed(w http.ResponseWriter) { http.Error(w, "Method not allowed", http.StatusMethodNotAllowed) }

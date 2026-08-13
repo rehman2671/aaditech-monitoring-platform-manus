@@ -3,6 +3,9 @@ package api
 import (
 	"context"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -47,4 +50,21 @@ func TestBuilderUnavailableMessage(t *testing.T) {
 	if got := builderUnavailableMessage(""); got == "" { t.Fatal("expected actionable message for missing builder key") }
 	if got := builderUnavailableMessage("configured"); got == "" { t.Fatal("expected actionable message for offline builder") }
 	if parseTime(time.Now().UTC().Format(time.RFC3339Nano)).IsZero() { t.Fatal("expected current UTC time to parse") }
+}
+
+func TestDownloadLatestServesNewestMsiToAdmin(t *testing.T) {
+	artifactDir := t.TempDir()
+	oldPath := filepath.Join(artifactDir, "SentinelPulseAgent-2.4.1-x64.msi")
+	newPath := filepath.Join(artifactDir, "SentinelPulseAgent-2.4.2-x64.msi")
+	if err := os.WriteFile(oldPath, []byte("old"), 0600); err != nil { t.Fatal(err) }
+	time.Sleep(10 * time.Millisecond)
+	if err := os.WriteFile(newPath, []byte("new"), 0600); err != nil { t.Fatal(err) }
+
+	handler := NewMSIBuildHandler(nil, artifactDir, "configured")
+	req := httptest.NewRequest("GET", "/api/v1/admin/msi-latest/download", nil).WithContext(context.WithValue(context.Background(), "claims", &auth.Claims{Role: "admin"}))
+	writer := httptest.NewRecorder()
+	handler.DownloadLatest(writer, req)
+	if writer.Code != 200 { t.Fatalf("expected 200, got %d: %s", writer.Code, writer.Body.String()) }
+	if !strings.Contains(writer.Header().Get("Content-Disposition"), "SentinelPulseAgent-2.4.2-x64.msi") { t.Fatalf("unexpected content disposition: %s", writer.Header().Get("Content-Disposition")) }
+	if writer.Body.String() != "new" { t.Fatalf("expected newest MSI body, got %q", writer.Body.String()) }
 }

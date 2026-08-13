@@ -90,6 +90,19 @@ export default function EnrollmentTokens({ tokens, onCreateToken, canWrite, acce
     }
   };
 
+  const handleDownloadLatest = async () => {
+    if (!accessToken || !canWrite) {
+      toast.error('Admin role required', { description: 'Only admins can download MSI installers.' });
+      return;
+    }
+    try {
+      await api.downloadLatestMSI(accessToken);
+      toast.success('Latest MSI download started', { description: 'Check your browser Downloads folder.' });
+    } catch (error) {
+      toast.error('No compiled MSI is available', { description: error instanceof Error ? error.message : 'Build an MSI first and make sure the Windows runner has reported it.' });
+    }
+  };
+
   const handleCopy = (tokenStr: string, id: string) => {
     void navigator.clipboard.writeText(tokenStr);
     setCopiedId(id);
@@ -114,6 +127,15 @@ export default function EnrollmentTokens({ tokens, onCreateToken, canWrite, acce
           >
             {isQueueingBuild ? <Loader2 className="w-4 h-4 animate-spin" /> : <Hammer className="w-4 h-4" />}
             Build & Sign MSI
+          </Button>
+          <Button
+            disabled={!canWrite || !accessToken}
+            onClick={() => void handleDownloadLatest()}
+            title="Download the newest compiled MSI from the shared artifact folder"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold gap-2 shadow-lg shadow-emerald-900/20"
+          >
+            <Download className="w-4 h-4" />
+            Download MSI
           </Button>
           <Button
             disabled={!canWrite}
@@ -150,6 +172,11 @@ export default function EnrollmentTokens({ tokens, onCreateToken, canWrite, acce
 
           {signMode === 'trusted' && !trustedReady && <div className="flex gap-2 items-start text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /><span>Trusted mode is intentionally blocked until a real code-signing certificate is installed on the Windows runner. Do not treat a self-signed certificate as production trust.</span></div>}
           {signMode !== 'trusted' && !testReady && <div className="flex gap-2 items-start text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /><span>Start the Windows runner before queuing a test build. Test mode does not provide Windows publisher trust.</span></div>}
+
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex items-start gap-3"><Download className="w-4 h-4 text-emerald-400 mt-0.5" /><div><p className="text-sm font-semibold text-slate-100">Download latest compiled MSI</p><p className="text-xs text-slate-400 mt-1">Downloads the newest `.msi` file from the shared artifact folder. If no build exists yet, the button will explain what is missing.</p></div></div>
+            <Button size="sm" onClick={() => void handleDownloadLatest()} disabled={!canWrite || !accessToken} className="shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white gap-1.5"><Download className="w-3.5 h-3.5" />Download latest MSI</Button>
+          </div>
 
           <div className="border-t border-slate-800 pt-4">
             <div className="flex items-center justify-between mb-3"><p className="text-xs font-semibold text-slate-300">Recent build jobs</p><Button variant="ghost" size="sm" onClick={() => void loadBuildState()} disabled={isLoadingBuildState} className="text-xs text-slate-400 hover:text-white">{isLoadingBuildState ? 'Refreshing…' : 'Refresh'}</Button></div>
