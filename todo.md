@@ -130,10 +130,10 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 
 
 ## Manual Builder Key & MSI Download Repair — 2026-08-14
-- [ ] Investigate why the MSI download option was missing in the dashboard (verify API client mappings, job status rendering, and admin permissions).
-- [ ] Implement manual builder key configuration instructions so operators can set `MSI_BUILDER_KEY` directly in `deployment/.env`.
-- [ ] Ensure canonical workspace files match the connected Windows workspace MSI build/download UI and API code.
-- [ ] Rebuild and restart the container stack, then verify that the download action appears for completed builds.
+- [x] Investigate why the MSI download option was missing in the dashboard (verify API client mappings, job status rendering, and admin permissions).
+- [x] Implement manual builder key configuration instructions so operators can set `MSI_BUILDER_KEY` directly in `deployment/.env`.
+- [x] Ensure canonical workspace files match the connected Windows workspace MSI build/download UI and API code.
+- [x] Rebuild and restart the container stack, then verify that the download action appears for completed builds.
 
 ## RS256 JWT & PFX Signing Certificate Configuration — 2026-08-14
 - [x] Add support for `JWT_PRIVATE_KEY_RS256`, `JWT_PUBLIC_KEY_RS256`, `SIGNING_CERT_PFX_PATH`, and `SIGNING_CERT_PASSWORD` in backend config and Docker Compose.
