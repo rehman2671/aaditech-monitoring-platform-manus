@@ -24,7 +24,7 @@ import { SseRealtimeClient } from '@/lib/sseRealtime';
 /** Precision Enterprise Glass: persistent control shell, typed transport seams, and role-aware operator actions. */
 export default function App() {
   const [location, navigate] = useLocation();
-  const auth = useAuth({ redirectOnUnauthenticated: false });
+  const auth = useAuth({ redirectOnUnauthenticated: false, enabled: false });
   const endpointQuery = trpc.monitoring.endpoints.useQuery(undefined, { enabled: Boolean(auth.user), retry: false });
   const alertRulesQuery = trpc.monitoring.alertRules.useQuery(undefined, { enabled: Boolean(auth.user), retry: false });
   const systemAlertsQuery = trpc.monitoring.systemAlerts.useQuery(undefined, { enabled: Boolean(auth.user), retry: false });

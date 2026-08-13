@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo } from "react";
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
   redirectPath?: string;
+  enabled?: boolean;
 };
 
 export function useAuth(options?: UseAuthOptions) {
@@ -13,10 +14,11 @@ export function useAuth(options?: UseAuthOptions) {
   // navigate — never during render. startLogin() mints a one-time nonce + writes
   // the state cookie, so calling it per render would overwrite the cookie and
   // desync it from an in-flight login's `state`.
-  const { redirectOnUnauthenticated = false, redirectPath } = options ?? {};
+  const { redirectOnUnauthenticated = false, redirectPath, enabled = true } = options ?? {};
   const utils = trpc.useUtils();
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
+    enabled,
     retry: false,
     refetchOnWindowFocus: false,
   });
@@ -70,7 +72,7 @@ export function useAuth(options?: UseAuthOptions) {
   ]);
 
   useEffect(() => {
-    if (!redirectOnUnauthenticated) return;
+    if (!enabled || !redirectOnUnauthenticated) return;
     if (meQuery.isLoading || logoutMutation.isPending) return;
     if (state.user) return;
     if (typeof window === "undefined") return;
@@ -83,6 +85,7 @@ export function useAuth(options?: UseAuthOptions) {
       startLogin();
     }
   }, [
+    enabled,
     redirectOnUnauthenticated,
     redirectPath,
     logoutMutation.isPending,

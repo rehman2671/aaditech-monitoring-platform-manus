@@ -81,5 +81,12 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Rebuild and verify live `/api/v1/auth/setup-status` returns `HTTP 200` without 404.
 
 ## Workspace backend sync & live verification checklist — 2026-08-14
-- [ ] Confirm updated server.go and auth_handler.go exist inside the Windows workspace backend tree.
-- [ ] Verify live `/api/v1/auth/setup-status` returns HTTP 200 from the container.
+- [x] Confirm updated server.go and auth_handler.go exist inside the Windows workspace backend tree; both files are present in `Aaditech_Monitoring_Platform/backend/go` and the rebuilt backend serves the new route.
+- [x] Verify live `/api/v1/auth/setup-status` returns HTTP 200 from the container; direct and frontend-proxied requests return `{"setup_complete":false}`.
+
+## Frontend API proxy failure — 2026-08-14
+- [x] Add Nginx reverse proxying in the existing `deployment` frontend for the supported Go REST API paths under `/api/v1/`; `/api/v1/auth/setup-status` and `/api/v1/auth/setup` now proxy successfully. Local Go mode intentionally does not depend on tRPC.
+- [x] Rebuild only `sentinelpulse_frontend` and verify setup-status returns 200 and setup POST returns the backend validation response rather than 404 from port 3001.
+
+## Local Go backend and tRPC compatibility — 2026-08-14
+- [x] Prevent the OAuth/tRPC client from issuing unsupported `/api/trpc/auth.me` requests during local username/password setup by disabling the OAuth auth query in the local Go-backed App runtime.
