@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { AlertRuleItem, fetchAlertRules } from "@/lib/sentinelApi";
+import { AlertRuleItem, fetchAlertRules, testWebhook } from "@/lib/sentinelApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,10 @@ export default function AlertRules() {
   const [threshold, setThreshold] = useState<string>("90");
   const [severity, setSeverity] = useState<string>("CRITICAL");
   const [submitting, setSubmitting] = useState<boolean>(false);
+
+  const [testUrl, setTestUrl] = useState<string>("");
+  const [testProvider, setTestProvider] = useState<string>("slack");
+  const [testing, setTesting] = useState<boolean>(false);
 
   const loadRules = async () => {
     setLoading(true);
@@ -71,8 +75,29 @@ export default function AlertRules() {
     }
   };
 
+  const handleTestWebhook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testUrl) {
+      toast.error("Please enter a webhook URL to test");
+      return;
+    }
+    setTesting(true);
+    try {
+      const result = await testWebhook(testUrl, testProvider);
+      if (result.success) {
+        toast.success(result.message || "Webhook test dispatched successfully");
+      } else {
+        toast.error(result.error || "Webhook test dispatch failed");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Webhook test failed");
+    } finally {
+      setTesting(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
@@ -214,35 +239,6 @@ export default function AlertRules() {
             )}
           </CardContent>
         </Card>
-      </div>
-    </div>
-  );
-}
-
-  const [testUrl, setTestUrl] = useState<string>("");
-  const [testProvider, setTestProvider] = useState<string>("slack");
-  const [testing, setTesting] = useState<boolean>(false);
-
-  const handleTestWebhook = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!testUrl) {
-      toast.error("Please enter a webhook URL to test");
-      return;
-    }
-    setTesting(true);
-    try {
-      const result = await import("@/lib/sentinelApi").then(mod => mod.testWebhook(testUrl, testProvider));
-      if (result.success) {
-        toast.success(result.message || "Webhook test dispatched successfully");
-      } else {
-        toast.error(result.error || "Webhook test dispatch failed");
-      }
-    } catch (err: any) {
-      toast.error(err?.message || "Webhook test failed");
-    } finally {
-      setTesting(false);
-    }
-  };
 
         <Card className="lg:col-span-3 bg-slate-900/60 border-slate-800 text-slate-100 shadow-xl mt-6">
           <CardHeader>
@@ -288,3 +284,7 @@ export default function AlertRules() {
             </form>
           </CardContent>
         </Card>
+      </div>
+    </div>
+  );
+}
