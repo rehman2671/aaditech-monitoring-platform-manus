@@ -94,6 +94,9 @@ func (s *Server) RegisterRoutes() http.Handler {
 		alertHandler.TestWebhook(w, r, claims)
 	})))
 
+	// Admin Retention Purge Route (Admin RBAC required)
+	mux.Handle("/api/v1/admin/retention/purge", s.requireAuth(http.HandlerFunc(api.HandleAdminRetentionPurge(s.db))))
+
 	return mux
 }
 
