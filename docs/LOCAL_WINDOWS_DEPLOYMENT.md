@@ -72,3 +72,10 @@ msiexec /i SentinelPulse-Agent-Local.msi /quiet /norestart
 ## References
 [1] Docker Compose Production Reference: `docs/DEPLOYMENT.md`  
 [2] .NET 8 SDK Documentation: https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-8
+
+
+## Toolchain troubleshooting references
+
+The .NET/NuGet restore process requires valid Windows profile and system path variables, particularly `LOCALAPPDATA` and the Program Files locations. NuGet documents this failure mode in [NuGet/Home issue 11863](https://github.com/NuGet/Home/issues/11863), where an invalid `LocalApplicationData` path produces the opaque `path1` error.
+
+WiX v4 is installed as the `wix` .NET tool and uses `wix build` rather than the WiX v3 `candle.exe`/`light.exe` pair. The official usage documentation is available in the [FireGiant WiX Using WiX guide](https://docs.firegiant.com/wix/using-wix/).

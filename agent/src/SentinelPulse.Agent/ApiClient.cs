@@ -13,36 +13,76 @@ namespace SentinelPulse.Agent
 
         public ApiClient()
         {
+            var configuredBaseUrl = Environment.GetEnvironmentVariable("SENTINELPULSE_API_BASE_URL");
+            if (string.IsNullOrWhiteSpace(configuredBaseUrl) ||
+                !Uri.TryCreate(configuredBaseUrl.TrimEnd('/') + "/", UriKind.Absolute, out var baseUri) ||
+                (baseUri.Scheme != Uri.UriSchemeHttp && baseUri.Scheme != Uri.UriSchemeHttps))
+            {
+                throw new InvalidOperationException(
+                    "SENTINELPULSE_API_BASE_URL must be configured with an absolute http(s) URL.");
+            }
+
             _httpClient = new HttpClient
             {
-                BaseAddress = new Uri("https://api.sentinelpulse.local")
+                BaseAddress = baseUri,
+                Timeout = TimeSpan.FromSeconds(30)
             };
         }
 
-        public async Task<bool> EnrollAsync(string enrollmentToken, string hardwareId)
+        public async Task<string?> EnrollAsync(string enrollmentToken, string endpointId, string hostname)
         {
+            if (string.IsNullOrWhiteSpace(enrollmentToken) || string.IsNullOrWhiteSpace(endpointId))
+            {
+                return null;
+            }
+
             try
             {
-                var payload = new { token = enrollmentToken, hardware_id = hardwareId };
-                var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-                var response = await _httpClient.PostAsync("/api/v1/agent/enroll", content);
-                return response.IsSuccessStatusCode;
+                var payload = new
+                {
+                    token = enrollmentToken,
+                    endpoint_id = endpointId,
+                    hostname
+                };
+                using var content = new StringContent(
+                    JsonSerializer.Serialize(payload),
+                    Encoding.UTF8,
+                    "application/json");
+                using var response = await _httpClient.PostAsync("api/v1/agent/enroll", content);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                await using var responseStream = await response.Content.ReadAsStreamAsync();
+                using var document = await JsonDocument.ParseAsync(responseStream);
+                return document.RootElement.TryGetProperty("device_token", out var deviceToken)
+                    ? deviceToken.GetString()
+                    : null;
             }
             catch
             {
-                return false;
+                return null;
             }
         }
 
         public async Task<bool> SendTelemetryAsync(string deviceToken, SystemMetrics metrics)
         {
+            if (string.IsNullOrWhiteSpace(deviceToken))
+            {
+                return false;
+            }
+
             try
             {
-                var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/telemetry/ingest");
+                using var request = new HttpRequestMessage(HttpMethod.Post, "api/v1/telemetry/ingest");
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", deviceToken);
-                request.Content = new StringContent(JsonSerializer.Serialize(metrics), Encoding.UTF8, "application/json");
+                request.Content = new StringContent(
+                    JsonSerializer.Serialize(metrics),
+                    Encoding.UTF8,
+                    "application/json");
 
-                var response = await _httpClient.SendAsync(request);
+                using var response = await _httpClient.SendAsync(request);
                 return response.IsSuccessStatusCode;
             }
             catch

@@ -3,24 +3,14 @@
   SentinelPulse Windows Agent MSI - WiX Toolset v4
 
   Expected build inputs:
-    -dAgentVersion=2.4.1.0
-    -dAgentSemVer=2.4.1
-    -dPublishDir=..\publish
-
-  Example:
-    wix build -arch x64 \
-      -dAgentVersion=2.4.1.0 \
-      -dAgentSemVer=2.4.1 \
-      -dPublishDir=..\publish \
-      sentinelpulse-agent.wxs \
-      -o ..\artifacts\SentinelPulseAgent-2.4.1-x64.msi
+    -d AgentVersion=2.4.1.0
+    -d AgentSemVer=2.4.1
+    -d PublishDir=..\publish
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
 
-  <!-- Stable identifier shared by all SentinelPulse Agent releases. -->
   <?define AgentUpgradeCode = "7D0DE72F-9425-4F9B-93AD-BE3F3E58A1C8" ?>
 
-  <!-- Required build-time variables. -->
   <?ifndef AgentVersion ?>
     <?define AgentVersion = "2.4.1.0" ?>
   <?endif ?>
@@ -43,7 +33,6 @@
 
     <SummaryInformation Description="SentinelPulse Windows Endpoint Monitoring Agent $(var.AgentSemVer)" />
 
-    <!-- Prevent downgrades while allowing major, minor, and patch upgrades. -->
     <MajorUpgrade
         DowngradeErrorMessage="A newer version of SentinelPulse Windows Agent is already installed."
         AllowSameVersionUpgrades="no"
@@ -51,11 +40,6 @@
 
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
 
-    <!--
-      The installer is intentionally quiet and service-oriented. The CI job
-      uses /qn for unattended installation; enterprise deployment systems can
-      supply the same MSI properties through Group Policy or Intune.
-    -->
     <Property Id="ARPNOREPAIR" Value="no" />
     <Property Id="ARPNOMODIFY" Value="no" />
 
@@ -65,7 +49,7 @@
       </Directory>
     </StandardDirectory>
 
-    <StandardDirectory Id="CommonApplicationDataFolder">
+    <StandardDirectory Id="CommonAppDataFolder">
       <Directory Id="PROGRAMDATAFOLDER" Name="SentinelPulse">
         <Directory Id="CONFIGFOLDER" Name="Agent" />
         <Directory Id="BUFFERFOLDER" Name="Buffer" />
@@ -83,11 +67,6 @@
   </Package>
 
   <Fragment>
-    <!--
-      The service component owns the executable and service registration.
-      The executable is explicitly excluded from AgentPayloadGroup below so
-      it has exactly one MSI component key path.
-    -->
     <Component Id="AgentServiceComponent" Directory="AGENTFOLDER" Guid="*">
       <File
           Id="AgentExecutable"
@@ -115,7 +94,6 @@
           Remove="uninstall"
           Wait="yes" />
 
-      <!-- Record the installed version for diagnostics and support tooling. -->
       <RegistryValue
           Root="HKLM"
           Key="Software\SentinelPulse\Agent"
@@ -132,25 +110,6 @@
   </Fragment>
 
   <Fragment>
-    <!--
-      Include the complete dotnet publish directory: DLLs, native runtime
-      dependencies, JSON configuration, and the executable's support files.
-      The service executable is excluded because AgentServiceComponent owns it.
-    -->
-    <ComponentGroup Id="AgentPayloadGroup" Directory="AGENTFOLDER">
-      <Files
-          Include="$(var.PublishDir)\**"
-          Exclude="$(var.PublishDir)\SentinelPulse.Agent.exe" />
-    </ComponentGroup>
-  </Fragment>
-
-  <Fragment>
-    <!--
-      Create persistent ProgramData directories. Registry values provide
-      stable component key paths without placing configuration secrets in the
-      MSI. The agent creates its encrypted configuration and SQLite files at
-      runtime using DPAPI and the service account identity.
-    -->
     <Component Id="ConfigurationDirectoriesComponent" Directory="CONFIGFOLDER" Guid="*">
       <CreateFolder />
       <RegistryValue

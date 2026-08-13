@@ -13,7 +13,11 @@ namespace SentinelPulse.Agent
         private readonly ApiClient _apiClient;
         private readonly OfflineBuffer _buffer;
 
-        public Worker(ILogger<Worker> logger, WmiCollectors collectors, ApiClient apiClient, OfflineBuffer buffer)
+        public Worker(
+            ILogger<Worker> logger,
+            WmiCollectors collectors,
+            ApiClient apiClient,
+            OfflineBuffer buffer)
         {
             _logger = logger;
             _collectors = collectors;
@@ -30,10 +34,36 @@ namespace SentinelPulse.Agent
                 try
                 {
                     var metrics = _collectors.CollectMetrics();
-                    var token = _buffer.LoadEncryptedCredential() ?? "dev-agent-token-placeholder";
+                    var endpointId = Environment.GetEnvironmentVariable("SENTINELPULSE_ENDPOINT_ID")
+                        ?? Environment.MachineName;
+                    var hostname = Environment.MachineName;
+                    var deviceToken = _buffer.LoadEncryptedCredential();
 
-                    bool sent = await _apiClient.SendTelemetryAsync(token, metrics);
-                    if (!sent)
+                    if (string.IsNullOrWhiteSpace(deviceToken))
+                    {
+                        var enrollmentToken = Environment.GetEnvironmentVariable("SENTINELPULSE_ENROLLMENT_TOKEN");
+                        if (!string.IsNullOrWhiteSpace(enrollmentToken))
+                        {
+                            deviceToken = await _apiClient.EnrollAsync(
+                                enrollmentToken,
+                                endpointId,
+                                hostname);
+                            if (!string.IsNullOrWhiteSpace(deviceToken))
+                            {
+                                _buffer.SaveEncryptedCredential(deviceToken);
+                                _logger.LogInformation(
+                                    "SentinelPulse Agent enrolled endpoint {EndpointId}.",
+                                    endpointId);
+                            }
+                        }
+                    }
+
+                    if (string.IsNullOrWhiteSpace(deviceToken))
+                    {
+                        _logger.LogError(
+                            "Agent is not enrolled. Configure SENTINELPULSE_ENROLLMENT_TOKEN once, or provision an encrypted device credential.");
+                    }
+                    else if (!await _apiClient.SendTelemetryAsync(deviceToken, metrics))
                     {
                         var payload = System.Text.Json.JsonSerializer.Serialize(metrics);
                         _buffer.Enqueue(payload);

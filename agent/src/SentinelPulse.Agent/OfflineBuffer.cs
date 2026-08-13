@@ -48,7 +48,7 @@ namespace SentinelPulse.Agent
         public void SaveEncryptedCredential(string credential)
         {
             var data = Encoding.UTF8.GetBytes(credential);
-            var encrypted = ProtectedData.Protect(data, null, DataProtectionScope.Machine);
+            var encrypted = ProtectedData.Protect(data, null, DataProtectionScope.LocalMachine);
             var configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "SentinelPulse", "agent.json");
             File.WriteAllBytes(configPath, encrypted);
         }
@@ -60,7 +60,7 @@ namespace SentinelPulse.Agent
                 var configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "SentinelPulse", "agent.json");
                 if (!File.Exists(configPath)) return null;
                 var encrypted = File.ReadAllBytes(configPath);
-                var decrypted = ProtectedData.Unprotect(encrypted, null, DataProtectionScope.Machine);
+                var decrypted = ProtectedData.Unprotect(encrypted, null, DataProtectionScope.LocalMachine);
                 return Encoding.UTF8.GetString(decrypted);
             }
             catch
