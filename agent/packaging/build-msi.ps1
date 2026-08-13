@@ -8,8 +8,9 @@
 [CmdletBinding()]
 param(
     [string]$Configuration = "Release",
-    [string]$AgentVersion = "2.4.1",
-    [string]$AgentSemVer = $AgentVersion
+    [string]$AgentVersion = "2.4.2",
+    [string]$AgentSemVer = $AgentVersion,
+    [switch]$NoRestore
 )
 
 $ErrorActionPreference = "Stop"
@@ -32,12 +33,15 @@ Remove-Item (Join-Path $publishDir "*") -Recurse -Force -ErrorAction SilentlyCon
 Remove-Item $payloadWxsFile -Force -ErrorAction SilentlyContinue
 
 Write-Host "Publishing SentinelPulse Agent $AgentSemVer for win-x64..."
-dotnet publish $projectFile `
-    --configuration $Configuration `
-    --runtime win-x64 `
-    --self-contained true `
-    --output $publishDir `
-    --nologo
+$publishArgs = @(
+    "--configuration", $Configuration,
+    "--runtime", "win-x64",
+    "--self-contained", "true",
+    "--output", $publishDir,
+    "--nologo"
+)
+if ($NoRestore) { $publishArgs += "--no-restore" }
+dotnet publish $projectFile @publishArgs
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE" }
 
 $publishedFiles = @(Get-ChildItem $publishDir -File | Where-Object { $_.Name -ne "SentinelPulse.Agent.exe" } | Sort-Object FullName)
