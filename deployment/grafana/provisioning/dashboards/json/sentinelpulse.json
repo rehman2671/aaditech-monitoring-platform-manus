@@ -1,0 +1,43 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "P542159050FAFE982"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "grafanaVersion": "10.4.0",
+  "hiddenFromMenu": false,
+  "liveNow": false,
+  "name": "SentinelPulse Operational Monitoring",
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["sentinelpulse", "edr", "wmi", "timescaledb"],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "30s", "1m"]
+  },
+  "timezone": "browser",
+  "title": "SentinelPulse Operational Monitoring",
+  "uid": "sentinelpulse-ops",
+  "version": 1,
+  "weekStart": ""
+}
