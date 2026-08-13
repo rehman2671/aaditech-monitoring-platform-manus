@@ -9,16 +9,17 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$ProjectRoot = $(
-        $base = $PSScriptRoot
-        if (-not $base -and $MyInvocation.MyCommand.Path) { $base = Split-Path -Parent $MyInvocation.MyCommand.Path }
-        if (-not $base) { $base = (Get-Location).Path }
-        (Resolve-Path (Join-Path $base "..\..")).Path
-    ),
+    [string]$ProjectRoot = "",
     [switch]$Rotate
 )
 
 $ErrorActionPreference = "Stop"
+if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+    $base = $PSScriptRoot
+    if (-not $base -and $MyInvocation.MyCommand.Path) { $base = Split-Path -Parent $MyInvocation.MyCommand.Path }
+    if (-not $base) { $base = (Get-Location).Path }
+    $ProjectRoot = (Resolve-Path (Join-Path $base "..\..")).Path
+}
 $deploymentDir = Join-Path $ProjectRoot "deployment"
 $envFile = Join-Path $deploymentDir ".env"
 if (-not (Test-Path $deploymentDir)) { throw "Deployment directory not found: $deploymentDir" }

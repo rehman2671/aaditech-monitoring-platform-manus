@@ -29,6 +29,7 @@ $ErrorActionPreference = "Stop"
 $packagingDir = $PSScriptRoot
 if (-not $packagingDir -and $MyInvocation.MyCommand.Path) { $packagingDir = Split-Path -Parent $MyInvocation.MyCommand.Path }
 if (-not $packagingDir) { $packagingDir = (Get-Location).Path }
+$packagingDir = (Resolve-Path $packagingDir).Path
 $buildScript = Join-Path $packagingDir "build-msi.ps1"
 $keyFile = Join-Path $packagingDir "..\config\msi-builder.key"
 $deploymentEnvFile = Join-Path $packagingDir "..\..\deployment\.env"

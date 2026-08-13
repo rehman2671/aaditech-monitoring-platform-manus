@@ -157,3 +157,7 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Fix `$MyInvocation.MyCommand.Definition` null pointer in `generate-builder-key.ps1` and `run-msi-builder.ps1` by falling back to `$PSScriptRoot`.
 - [x] Ensure the script reliably writes `MSI_BUILDER_KEY` to `deployment/.env` and `agent/config/msi-builder.key`.
 - [x] Re-run the key generation script and runner startup on the Windows host and verify runner online status.
+
+## Parameter Default Root Resolution Fix — 2026-08-14
+- [x] Move ProjectRoot resolution out of parameter defaults into the script body so `$PSScriptRoot` resolves correctly.
+- [x] Test key generation on the Windows host and verify `deployment/.env` is written successfully.
