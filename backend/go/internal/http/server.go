@@ -76,6 +76,19 @@ func (s *Server) RegisterRoutes() http.Handler {
 		endpointHandler.ListEndpoints(w, r, claims)
 	})))
 
+	// Alert Rules
+	alertHandler := api.NewAlertHandler(s.db)
+	mux.Handle("/api/v1/alert-rules", s.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		claims := r.Context().Value("claims").(*auth.Claims)
+		if r.Method == http.MethodGet {
+			alertHandler.ListRules(w, r, claims)
+		} else if r.Method == http.MethodPost {
+			alertHandler.CreateRule(w, r, claims)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
+
 	return mux
 }
 
