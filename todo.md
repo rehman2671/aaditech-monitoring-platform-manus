@@ -102,3 +102,29 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 ## Token page browser compatibility — 2026-08-14
 - [x] Replace `crypto.randomUUID()` in the token-generation UI with a crypto-free timestamp/random client identifier so older or restricted browsers do not crash after token creation; the OAuth nonce path also has a guarded fallback.
 - [x] Rebuild the existing `deployment` frontend and verify the rebuilt container serves HTTP 200 with setup-status HTTP 200; direct source/bundle inspection confirms the token-row code no longer calls `crypto.randomUUID`. The connected Windows browser must still perform the final hard-refresh-and-click check because the sandbox browser cannot reach the Windows host network.
+
+## Automatic signed MSI build workflow — 2026-08-14
+- [x] Add a secure Windows build/signing contract that separates certificate metadata from the private signing key and never exposes the key in the dashboard or MSI.
+- [x] Extend the local platform with an administrator-only MSI build job that compiles the agent, signs the agent executable and MSI when a trusted certificate is configured, creates a SHA-256 sidecar, and records build status.
+- [x] Add certificate status/configuration UI and a versioned MSI build/download action to the post-setup dashboard.
+- [x] Add backend/API validation and unit test coverage for certificate status, admin authorization, build-job validation, and artifact download metadata.
+- [x] Validate the signed/unsigned paths on the connected Windows workspace, including Authenticode verification, service-install compatibility, and Docker frontend integration.
+- [x] Document that production signing requires a user-provided trusted code-signing certificate/private key or approved signing service; do not generate a fake trusted certificate automatically.
+- [x] Mark this workflow complete only after the local build/install smoke test passes and save a checkpoint.
+
+## Automatic signed MSI workflow — security design notes
+- [x] Define the safe default: automatic signing can only use a certificate/private key already provisioned by the administrator; the platform must not mint a trusted public certificate or expose a PFX/private key through the browser.
+- [x] Define the test-only alternative: an explicitly labeled self-signed certificate may be generated for internal testing, but it must be marked untrusted and never presented as production signing.
+- [x] Define versioning: each build receives an explicit semantic version, immutable artifact filename, checksum, signing status, certificate subject/thumbprint, and build timestamp.
+- [x] Define deployment boundary: the actual `dotnet publish`, WiX build, Authenticode signing, and artifact storage run on the connected Windows build host, not inside the Linux Docker frontend container.
+- [x] Define authorization: only platform Admin users can configure signing, start builds, or download MSI artifacts; Viewer users remain read-only.
+- [x] Define failure behavior: if no trusted certificate is configured, the production build action fails closed with an actionable message; an unsigned test MSI is allowed only through an explicit test-mode action.
+
+## Automatic signed MSI workflow — implementation history
+- [x] Inspect canonical backend, dashboard, and Windows workspace structure before editing.
+- [x] Implement the Windows build/sign script and manifest/report output.
+- [x] Implement backend endpoints and persistence for signing/build status.
+- [x] Implement dashboard controls and download flow.
+- [x] Run tests and local Windows smoke validation.
+- [x] Save final checkpoint after all items above are complete.
+
