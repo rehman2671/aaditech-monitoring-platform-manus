@@ -249,6 +249,7 @@ export default function App() {
                   <Route path="/endpoints"><EndpointsList endpoints={shell.endpoints} searchQuery={searchQuery} onSearchChange={setSearchQuery} /></Route>
                   <Route path="/endpoints/:id"><EndpointDetail endpoints={shell.endpoints} onTriggerOnDemandRefresh={handleTriggerOnDemandRefresh} /></Route>
                   <Route path="/alerts"><AlertsCenter alertRules={shell.alertRules} systemAlerts={shell.systemAlerts} onToggleRule={handleToggleRule} onAcknowledgeAlert={handleAcknowledgeAlert} canWrite={shell.isAdmin} /></Route>
+                  <Route path="/alert-rules" component={AlertRules} />
                   <Route path="/tokens"><EnrollmentTokens tokens={shell.tokens} onCreateToken={handleCreateToken} canWrite={shell.isAdmin} /></Route>
                   <Route path="/settings"><SettingsPage canWrite={shell.isAdmin} /></Route>
                   <Route component={NotFound} />
@@ -261,3 +262,7 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
+import AlertRules from './pages/AlertRules';
+// inside routes:
+// <Route path="/alert-rules" component={AlertRules} />
