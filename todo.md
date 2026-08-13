@@ -147,3 +147,8 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Redesign the EnrollmentTokens MSI card so a clear download/status box is always rendered even when the runner is offline or no jobs have been queued yet.
 - [x] Provide a direct fallback or manual installer instruction when the runner is offline so the operator is never left with a blank "No MSI builds have been queued" message.
 - [x] Rebuild and restart the container stack and verify the updated download guidance appears immediately in the live UI; frontend and backend returned HTTP 200, containers are running, and the production bundle contains the new download control.
+
+## Agent Telemetry & MSI Signature Verification — 2026-08-14
+- [ ] Investigate why installed agent telemetry is not reaching the portal (check enrollment token configuration, API base URL registry, DPAPI configuration, and Windows Service logs).
+- [ ] Add Authenticode signature inspection to the MSI build manifest and dashboard so operators can instantly verify whether an installer is signed and check its certificate subject/thumbprint.
+- [ ] Provide clear PowerShell diagnostic commands for checking the installed SentinelPulse agent status and service logs on the Windows host.

@@ -263,7 +263,12 @@ $manifest = [ordered]@{
 }
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path $manifestFile -Encoding utf8
 
-Write-Host "MSI: $msiFile"
-Write-Host "SHA256: $hash"
-Write-Host "Manifest: $manifestFile"
-Write-Host "Signing mode: $SignMode; trusted: $certificateTrusted"
+	Write-Host "MSI: $msiFile"
+	Write-Host "SHA256: $hash"
+	Write-Host "Manifest: $manifestFile"
+	Write-Host "Signing mode: $SignMode; trusted: $certificateTrusted"
+	if ($msiSignature) {
+		Write-Host "Authenticode MSI Signature Status: $($msiSignature.Status) ($($msiSignature.StatusMessage))" -ForegroundColor Green
+	} else {
+		Write-Host "Authenticode MSI Signature Status: Unsigned (Test mode or no certificate)" -ForegroundColor Yellow
+	}
