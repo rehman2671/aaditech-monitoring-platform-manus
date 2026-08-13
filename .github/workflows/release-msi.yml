@@ -1,0 +1,48 @@
+name: SentinelPulse Windows MSI Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-msi:
+    name: Build WiX v4 MSI on Windows Runner
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install WiX v4 Global Tool
+        run: dotnet tool install --global wix --version 4.0.4
+
+      - name: Build C# Windows Agent
+        run: |
+          cd agent/src/SentinelPulse.Agent
+          dotnet publish -c Release -r win-x64 --self-contained true -o ../../publish/agent
+
+      - name: Compile WiX v4 MSI Installer
+        run: |
+          cd agent/packaging
+          wix extension add WixToolset.NetFx.wixext
+          wix build sentinelpulse-agent.wxs -ext WixToolset.NetFx.wixext -out ../../publish/SentinelPulse-Agent-${{ github.ref_name }}.msi
+
+      - name: Generate SHA-256 Checksum
+        run: |
+          cd publish
+          Get-FileHash SentinelPulse-Agent-${{ github.ref_name }}.msi -Algorithm SHA256 | Select-Object -ExpandProperty Hash | Out-File -Encoding ascii SentinelPulse-Agent-${{ github.ref_name }}.msi.sha256
+
+      - name: Upload Release Artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            publish/SentinelPulse-Agent-${{ github.ref_name }}.msi
+            publish/SentinelPulse-Agent-${{ github.ref_name }}.msi.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
