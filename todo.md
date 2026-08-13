@@ -26,3 +26,5 @@ Deployment findings: the target workspace is populated and SentinelPulse Timesca
 - [ ] Rebuild and upgrade the installed Windows service after the fail-closed agent configuration fix.
 - [x] Provide a Command-Prompt-safe elevated PowerShell execution path for the SentinelPulse agent MSI upgrade.
 - [x] Verify local SentinelPulse backend readiness, Windows service execution, and agent MSI packaging.
+- [x] Add a production Nginx frontend container to `deployment/docker-compose.yml` and a corresponding `frontend.Dockerfile` so the React dashboard runs in Docker alongside the Go backend.
+- [x] Validate the new frontend Docker image by building it and proxying API traffic to the Go backend.
