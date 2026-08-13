@@ -72,3 +72,13 @@ jobs:
 
       - name: Run Vitest Unit, Integration & Acceptance Tests
         run: pnpm test
+
+  smoke-test-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Verify Smoke Test Script
+        run: |
+          bash -n scripts/smoke_test.sh
+          echo "Smoke test script syntax is valid."
