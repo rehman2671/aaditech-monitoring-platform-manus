@@ -12,7 +12,10 @@ RUN npx vite build
 # Production Nginx stage
 FROM nginx:alpine
 
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Replace the stock Nginx welcome page with the Vite dashboard output.
+# This project configures Vite to emit the browser bundle under dist/public.
+RUN rm -rf /usr/share/nginx/html/*
+COPY --from=builder /app/dist/public/ /usr/share/nginx/html/
 
 # Custom Nginx config to support SPA client routing and proxying API/auth/trpc traffic
 RUN echo 'server { ' \

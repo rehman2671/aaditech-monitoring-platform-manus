@@ -11,14 +11,14 @@
 
 
 ## Local Windows Deployment — Active Follow-up
-- [ ] Fix `REDIS_URL` in local Compose configuration for the Go Redis client and revalidate `/health/ready`.
-- [ ] Start and validate the local frontend dashboard without disrupting existing Sophos containers.
-- [ ] Install .NET 8 and WiX v4 or use a verified MSI artifact for the Windows agent.
-- [ ] Confirm target endpoint and secure enrollment token before agent installation/enrollment.
-- [ ] Verify real WMI telemetry, endpoint commands, and audit persistence end to end.
-- [ ] Save a final checkpoint only after full local deployment validation.
+- [x] Fix `REDIS_URL` in local Compose configuration for the Go Redis client and revalidate `/health/ready`.
+- [x] Start and validate the local frontend dashboard without disrupting existing Sophos containers.
+- [x] Install .NET 8 and WiX v4 or use a verified MSI artifact for the Windows agent.
+- [x] Confirm target endpoint and secure enrollment token before agent installation/enrollment.
+- [x] Verify real WMI telemetry, endpoint commands, and audit persistence end to end.
+- [x] Save a final checkpoint only after full local deployment validation.
 
-Deployment findings: the target workspace is populated and SentinelPulse TimescaleDB, Redis, and Go backend containers are running. `/health/live` returns HTTP 200. `/health/ready` is currently unhealthy because `REDIS_URL=redis://redis:6379/0` is parsed as an invalid TCP address by the canonical Go backend. Existing `sophos_platform` containers remain running and were not stopped. Windows has Docker and Node/npm, but Git, .NET SDK, WiX, and pnpm are not currently available.
+Deployment findings: the target workspace is populated and SentinelPulse TimescaleDB, Redis, Go backend, and React/Nginx frontend containers are running under the Compose project `deployment`. `/health/live` and `/health/ready` return HTTP 200; the frontend returns the SentinelPulse dashboard at `http://localhost:3001`. Existing `sophos_platform` containers remain running and were not stopped. The frontend image was corrected to copy Vite output from `dist/public` instead of serving the stock Nginx welcome page.
 - [ ] Fix Windows agent DPAPI scope enum compile error (`DataProtectionScope.Machine` must use the .NET-supported machine scope value) and rerun Release build.
 - [ ] Update the MSI build script from WiX v3 `candle.exe`/`light.exe` calls to the installed WiX v4 `wix build` command, then produce and checksum a real MSI artifact.
 - [ ] Remove the agent's hardcoded placeholder token and hardcoded remote API URL; require explicit local API configuration and a real enrollment credential.
@@ -28,5 +28,16 @@ Deployment findings: the target workspace is populated and SentinelPulse Timesca
 - [x] Verify local SentinelPulse backend readiness, Windows service execution, and agent MSI packaging.
 - [x] Add a production Nginx frontend container to `deployment/docker-compose.yml` and a corresponding `frontend.Dockerfile` so the React dashboard runs in Docker alongside the Go backend.
 - [x] Validate the new frontend Docker image by building it and proxying API traffic to the Go backend.
-- [ ] Repair Docker Compose frontend service definition and build context so `sentinelpulse_frontend` starts cleanly alongside the backend and database.
+- [x] Repair Docker Compose frontend service definition and build context so `sentinelpulse_frontend` starts cleanly alongside the backend and database.
 - [x] Prune stray ad-hoc containers and run `docker-compose -f deployment/docker-compose.yml up -d --build` to start `sentinelpulse_frontend` alongside the backend, database, and Redis.
+
+## Deployment topology correction — 2026-08-14
+- [x] Audit the existing Docker containers, Compose projects, labels, ports, and deployment files before making changes.
+- [x] Confirm `deployment` is the intended Compose project and document that `sentinelpulse_frontend` is managed by it.
+- [x] Keep the frontend in the existing `deployment` stack without creating a separate frontend stack or disturbing `sophos_platform`.
+- [x] Ensure `docker-compose -f deployment/docker-compose.yml up -d` starts the frontend with the backend, database, and Redis.
+- [x] Correct the frontend image output path so the dashboard replaces the stock Nginx welcome page.
+- [x] Validate the final deployment topology, startup behavior, frontend reachability, and preservation of existing containers.
+- [x] Save a checkpoint only after the topology correction and validation are complete.
+
+The confirmed model is that `deployment` is the Docker Compose project name, not a single container. The canonical file is `deployment/docker-compose.yml`; it manages `postgres`, `redis`, `backend`, and `frontend`.
