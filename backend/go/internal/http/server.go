@@ -76,7 +76,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 		endpointHandler.ListEndpoints(w, r, claims)
 	})))
 
-	// Alert Rules
+	// Alert Rules & Webhook Testing
 	alertHandler := api.NewAlertHandler(s.db)
 	mux.Handle("/api/v1/alert-rules", s.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims := r.Context().Value("claims").(*auth.Claims)
@@ -87,6 +87,11 @@ func (s *Server) RegisterRoutes() http.Handler {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
+	})))
+
+	mux.Handle("/api/v1/alert-rules/test", s.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		claims := r.Context().Value("claims").(*auth.Claims)
+		alertHandler.TestWebhook(w, r, claims)
 	})))
 
 	return mux

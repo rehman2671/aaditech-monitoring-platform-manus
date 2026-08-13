@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"time"
 
+	"github.com/sentinelpulse/backend/internal/alerting"
 	"github.com/sentinelpulse/backend/internal/auth"
 
 	"github.com/google/uuid"
@@ -93,5 +95,57 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request, claims
 		Threshold: req.Threshold,
 		Severity:  req.Severity,
 		Enabled:   req.Enabled,
+	})
+}
+
+func (h *AlertHandler) TestWebhook(w http.ResponseWriter, r *http.Request, claims *auth.Claims) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		URL      string `json:"url"`
+		Provider string `json:"provider"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.URL == "" {
+		http.Error(w, "Webhook URL is required", http.StatusBadRequest)
+		return
+	}
+
+	testAlert := alerting.AlertPayload{
+		AlertID:    "test-alert-00",
+		EndpointID: "ws-corp-test",
+		Severity:   "CRITICAL",
+		Message:    "SentinelPulse test webhook dispatch notification",
+		FiredAt:    time.Now(),
+	}
+
+	cfg := alerting.WebhookConfig{
+		URL:      req.URL,
+		Provider: alerting.ProviderType(req.Provider),
+	}
+
+	err := alerting.DispatchAlert(cfg, testAlert)
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		w.WriteHeader(http.StatusBadGateway)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Webhook test dispatched successfully",
 	})
 }

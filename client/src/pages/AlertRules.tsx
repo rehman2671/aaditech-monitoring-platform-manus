@@ -218,3 +218,73 @@ export default function AlertRules() {
     </div>
   );
 }
+
+  const [testUrl, setTestUrl] = useState<string>("");
+  const [testProvider, setTestProvider] = useState<string>("slack");
+  const [testing, setTesting] = useState<boolean>(false);
+
+  const handleTestWebhook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testUrl) {
+      toast.error("Please enter a webhook URL to test");
+      return;
+    }
+    setTesting(true);
+    try {
+      const result = await import("@/lib/sentinelApi").then(mod => mod.testWebhook(testUrl, testProvider));
+      if (result.success) {
+        toast.success(result.message || "Webhook test dispatched successfully");
+      } else {
+        toast.error(result.error || "Webhook test dispatch failed");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Webhook test failed");
+    } finally {
+      setTesting(false);
+    }
+  };
+
+        <Card className="lg:col-span-3 bg-slate-900/60 border-slate-800 text-slate-100 shadow-xl mt-6">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Bell className="w-5 h-5 text-indigo-400" />
+              Test Webhook Dispatcher (Slack / PagerDuty / Generic)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleTestWebhook} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <div>
+                <label className="text-xs font-medium text-slate-300">Provider</label>
+                <select
+                  value={testProvider}
+                  onChange={(e) => setTestProvider(e.target.value)}
+                  className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="slack">Slack</option>
+                  <option value="pagerduty">PagerDuty</option>
+                  <option value="generic">Generic JSON</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-300">Webhook Target URL</label>
+                <input
+                  type="url"
+                  placeholder="https://hooks.slack.com/services/..."
+                  value={testUrl}
+                  onChange={(e) => setTestUrl(e.target.value)}
+                  className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <Button
+                  type="submit"
+                  disabled={testing}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
+                >
+                  {testing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Bell className="w-4 h-4 mr-2" />}
+                  Send Test Alert
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>

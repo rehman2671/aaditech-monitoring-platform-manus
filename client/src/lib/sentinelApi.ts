@@ -70,3 +70,21 @@ export async function fetchAlertRules(token?: string): Promise<AlertRuleItem[]> 
     return [];
   }
 }
+
+export async function testWebhook(url: string, provider: string, token?: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const headers: HeadersInit = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    const res = await fetch("/api/v1/alert-rules/test", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ url, provider }),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err: any) {
+    return { success: false, error: err?.message || "Network error testing webhook" };
+  }
+}
