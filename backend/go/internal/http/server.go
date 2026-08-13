@@ -5,9 +5,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/sentinelpulse/backend/internal/api"
+	"github.com/sentinelpulse/backend/internal/auth"
 	"github.com/sentinelpulse/backend/internal/config"
+	"github.com/sentinelpulse/backend/internal/telemetry"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -25,6 +29,7 @@ func NewServer(cfg *config.Config, db *sql.DB, rdb *redis.Client) *Server {
 func (s *Server) RegisterRoutes() http.Handler {
 	mux := http.NewServeMux()
 
+	// Health endpoints
 	mux.HandleFunc("/health/live", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -53,7 +58,45 @@ func (s *Server) RegisterRoutes() http.Handler {
 		json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
 	})
 
+	// Telemetry Ingress
+	mux.Handle("/api/v1/telemetry", telemetry.HandleTelemetryIngest(s.rdb, s.cfg.StreamName))
+
+	// Enrollment
+	enrollmentHandler := api.NewEnrollmentHandler(s.db)
+	mux.HandleFunc("/api/v1/agents/enroll", enrollmentHandler.EnrollAgent)
+	mux.Handle("/api/v1/enrollment-tokens", s.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		claims := r.Context().Value("claims").(*auth.Claims)
+		enrollmentHandler.CreateToken(w, r, claims)
+	})))
+
+	// Endpoints
+	endpointHandler := api.NewEndpointHandler(s.db)
+	mux.Handle("/api/v1/endpoints", s.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		claims := r.Context().Value("claims").(*auth.Claims)
+		endpointHandler.ListEndpoints(w, r, claims)
+	})))
+
 	return mux
+}
+
+func (s *Server) requireAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			http.Error(w, "Unauthorized: missing bearer token", http.StatusUnauthorized)
+			return
+		}
+
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		claims, err := auth.ValidateToken(tokenStr, s.cfg.JwtSecret)
+		if err != nil {
+			http.Error(w, "Unauthorized: invalid token", http.StatusUnauthorized)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), "claims", claims)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 func errToString(err error) string {
