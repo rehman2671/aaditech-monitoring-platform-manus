@@ -88,3 +88,20 @@ export async function testWebhook(url: string, provider: string, token?: string)
     return { success: false, error: err?.message || "Network error testing webhook" };
   }
 }
+
+export async function sendEndpointCommand(endpointId: string, commandType: 'QUARANTINE' | 'ISOLATE' | 'REBOOT', payload: string = '', token?: string): Promise<any> {
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  const res = await fetch(`/api/v1/endpoints/${endpointId}/command`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ command_type: commandType, payload })
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to send command: ${text}`);
+  }
+  return res.json();
+}

@@ -76,6 +76,15 @@ func (s *Server) RegisterRoutes() http.Handler {
 		endpointHandler.ListEndpoints(w, r, claims)
 	})))
 
+	// Endpoint Command Execution (Admin RBAC required)
+	mux.Handle("/api/v1/endpoints/", s.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/command") && r.Method == http.MethodPost {
+			api.HandleEndpointCommand(s.db)(w, r)
+			return
+		}
+		http.NotFound(w, r)
+	})))
+
 	// Alert Rules & Webhook Testing
 	alertHandler := api.NewAlertHandler(s.db)
 	mux.Handle("/api/v1/alert-rules", s.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
