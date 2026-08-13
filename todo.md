@@ -98,3 +98,7 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 
 ## Test validation follow-up — 2026-08-14
 - [x] Isolate and document the `server/monitoring.test.ts` dashboard-summary timeout without regressing the local REST compatibility fixes; the first run had one 5-second timeout, and a targeted rerun completed all 4 monitoring tests successfully in 3.59 seconds. The earlier root cause remains unconfirmed, so no stronger cause is asserted.
+
+## Token page browser compatibility — 2026-08-14
+- [x] Replace `crypto.randomUUID()` in the token-generation UI with a crypto-free timestamp/random client identifier so older or restricted browsers do not crash after token creation; the OAuth nonce path also has a guarded fallback.
+- [x] Rebuild the existing `deployment` frontend and verify the rebuilt container serves HTTP 200 with setup-status HTTP 200; direct source/bundle inspection confirms the token-row code no longer calls `crypto.randomUUID`. The connected Windows browser must still perform the final hard-refresh-and-click check because the sandbox browser cannot reach the Windows host network.

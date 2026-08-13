@@ -22,6 +22,10 @@ import { toast } from 'sonner';
 import { SseRealtimeClient } from '@/lib/sseRealtime';
 import { api } from '@/lib/api';
 
+function createClientRowId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 /** Precision Enterprise Glass: persistent control shell, typed transport seams, and role-aware operator actions. */
 export default function App() {
   const [location, navigate] = useLocation();
@@ -225,7 +229,7 @@ export default function App() {
     try {
       const result = await api.createEnrollmentToken(session.accessToken);
       setTokens(prev => [{
-        id: crypto.randomUUID(),
+        id: createClientRowId('token'),
         tokenHash: 'sha256-generated',
         plainToken: result.enrollment_token,
         expiresAt: result.expires_at,
