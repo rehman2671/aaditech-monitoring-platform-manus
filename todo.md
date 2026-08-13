@@ -152,3 +152,8 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [ ] Investigate why installed agent telemetry is not reaching the portal (check enrollment token configuration, API base URL registry, DPAPI configuration, and Windows Service logs).
 - [ ] Add Authenticode signature inspection to the MSI build manifest and dashboard so operators can instantly verify whether an installer is signed and check its certificate subject/thumbprint.
 - [ ] Provide clear PowerShell diagnostic commands for checking the installed SentinelPulse agent status and service logs on the Windows host.
+
+## PowerShell Path Bug Fix — 2026-08-14
+- [x] Fix `$MyInvocation.MyCommand.Definition` null pointer in `generate-builder-key.ps1` and `run-msi-builder.ps1` by falling back to `$PSScriptRoot`.
+- [x] Ensure the script reliably writes `MSI_BUILDER_KEY` to `deployment/.env` and `agent/config/msi-builder.key`.
+- [x] Re-run the key generation script and runner startup on the Windows host and verify runner online status.

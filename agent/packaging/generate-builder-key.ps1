@@ -9,7 +9,12 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$ProjectRoot = (Resolve-Path (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Definition) "..\..")),
+    [string]$ProjectRoot = $(
+        $base = $PSScriptRoot
+        if (-not $base -and $MyInvocation.MyCommand.Path) { $base = Split-Path -Parent $MyInvocation.MyCommand.Path }
+        if (-not $base) { $base = (Get-Location).Path }
+        (Resolve-Path (Join-Path $base "..\..")).Path
+    ),
     [switch]$Rotate
 )
 
