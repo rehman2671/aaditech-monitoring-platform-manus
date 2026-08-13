@@ -1,4 +1,4 @@
-name: SentinelPulse CI/CD Matrix
+name: CI Pipeline
 
 on:
   push:
@@ -72,6 +72,32 @@ jobs:
 
       - name: Run Vitest Unit, Integration & Acceptance Tests
         run: pnpm test
+
+  windows-agent-verification:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore and Build C# Windows Agent
+        run: |
+          cd agent/src/SentinelPulse.Agent
+          dotnet restore
+          dotnet build -c Release
+
+      - name: Install WiX v4 Global Tool
+        run: dotnet tool install --global wix --version 4.0.4
+
+      - name: Validate WiX Installer Source
+        run: |
+          cd agent/packaging
+          wix extension add WixToolset.NetFx.wixext
+          wix source inspect sentinelpulse-agent.wxs
 
   smoke-test-check:
     runs-on: ubuntu-latest
