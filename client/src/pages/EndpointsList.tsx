@@ -26,7 +26,7 @@ export default function EndpointsList({ endpoints, searchQuery, onSearchChange }
     return matchesSearch && matchesStatus;
   });
 
-  const installScript = `Invoke-WebRequest -Uri "https://sentinelpulse.internal/agent/install.ps1" -OutFile "$env:TEMP\\install.ps1"; & "$env:TEMP\\install.ps1" -Token "sp_enrol_99f81a7b6c2d4e8f9a0b1c2d3e4f5a6b"`;
+  const installScript = `Invoke-WebRequest -Uri "http://10.73.99.58:8080/agent/install.ps1" -OutFile "$env:TEMP\\install.ps1"; & "$env:TEMP\\install.ps1" -Token "sp-enrol-00000000-0000-0000-0000-000000000000"`;
 
   const handleCopyScript = () => {
     navigator.clipboard.writeText(installScript);

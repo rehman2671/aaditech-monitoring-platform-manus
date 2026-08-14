@@ -28,6 +28,7 @@ namespace SentinelPulse.Agent
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("SentinelPulse Agent service starting up.");
+            var sequenceNumber = 0L;
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -63,7 +64,7 @@ namespace SentinelPulse.Agent
                         _logger.LogError(
                             "Agent is not enrolled. Configure SENTINELPULSE_ENROLLMENT_TOKEN once, or provision an encrypted device credential.");
                     }
-                    else if (!await _apiClient.SendTelemetryAsync(deviceToken, metrics))
+                    else if (!await _apiClient.SendTelemetryAsync(deviceToken, endpointId, sequenceNumber++, metrics))
                     {
                         var payload = System.Text.Json.JsonSerializer.Serialize(metrics);
                         _buffer.Enqueue(payload);

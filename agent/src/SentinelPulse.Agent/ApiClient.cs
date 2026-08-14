@@ -66,19 +66,34 @@ namespace SentinelPulse.Agent
             }
         }
 
-        public async Task<bool> SendTelemetryAsync(string deviceToken, SystemMetrics metrics)
+        public async Task<bool> SendTelemetryAsync(
+            string deviceToken,
+            string endpointId,
+            long sequenceNumber,
+            SystemMetrics metrics)
         {
-            if (string.IsNullOrWhiteSpace(deviceToken))
+            if (string.IsNullOrWhiteSpace(deviceToken) || string.IsNullOrWhiteSpace(endpointId))
             {
                 return false;
             }
 
             try
             {
-                using var request = new HttpRequestMessage(HttpMethod.Post, "api/v1/telemetry/ingest");
+                var envelope = new
+                {
+                    schema_version = "1.0",
+                    event_id = Guid.NewGuid().ToString("N"),
+                    endpoint_id = endpointId,
+                    sequence_number = sequenceNumber,
+                    capture_time = DateTimeOffset.UtcNow.ToString("O"),
+                    module = "system",
+                    payload = metrics
+                };
+
+                using var request = new HttpRequestMessage(HttpMethod.Post, "api/v1/telemetry");
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", deviceToken);
                 request.Content = new StringContent(
-                    JsonSerializer.Serialize(metrics),
+                    JsonSerializer.Serialize(envelope),
                     Encoding.UTF8,
                     "application/json");
 

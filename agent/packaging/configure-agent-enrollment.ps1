@@ -27,6 +27,9 @@ if ([string]::IsNullOrWhiteSpace($EnrollmentToken)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($EnrollmentToken)) { throw "An enrollment token is required." }
+if ($EnrollmentToken -notmatch '^sp-enrol-[0-9a-fA-F-]{36}$') {
+    throw "Invalid enrollment token format. Generate a fresh token in the SentinelPulse portal; it should begin with 'sp-enrol-' and contain a UUID. Do not use the MSI builder key."
+}
 if ([string]::IsNullOrWhiteSpace($EndpointId)) { throw "EndpointId cannot be empty." }
 
 [Environment]::SetEnvironmentVariable("SENTINELPULSE_API_BASE_URL", $ApiBaseUrl.TrimEnd('/'), "Machine")

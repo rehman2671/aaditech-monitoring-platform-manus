@@ -180,9 +180,15 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 ## MSI runner stuck-job repair — 2026-08-14
 - [x] Audit the connected Windows host runner, Visual Studio signing tools, environment variables, and current pending/running MSI jobs.
 - [x] Fix runner/build error propagation and retry/claim behavior so jobs cannot remain indefinitely pending or running after a failed build/sign step.
-- [ ] Validate a real signed MSI build using the available Visual Studio Windows SDK signing tools, then verify portal download, signature status, and endpoint telemetry.
-- [ ] Verify the authenticated latest-MSI download in the connected Windows browser after refreshing the `/tokens` page.
-- [ ] Configure the installed agent with a tenant-scoped enrollment token, restart the service, and verify endpoint plus real WMI metrics appear in the local database/dashboard.
+- [x] Validate a real signed MSI build using the available Visual Studio Windows SDK signing tools, then verify portal download, signature status, and endpoint telemetry.
+- [x] Verify the authenticated latest-MSI download in the connected Windows browser after refreshing the `/tokens` page.
+- [x] Configure the installed agent with a tenant-scoped enrollment token, restart the service, and verify endpoint plus real WMI metrics appear in the local database/dashboard.
 - [x] Add and validate a Command-Prompt-safe enrollment helper so operators can set the token without accidentally entering PowerShell commands into cmd.exe; PowerShell 5.1 help parsing passed without writing a token.
 - [x] Update the acceptance test that still expects the removed local tRPC MSI build mutation; it now asserts the documented `PRECONDITION_FAILED` contract.
 - [x] Add a `.cmd` wrapper that launches the enrollment PowerShell helper safely from Command Prompt with the local API default; wrapper text validation confirms RunAs elevation and helper wiring without executing or exposing a token.
+- [x] Fix the agent telemetry URL to match the live Go route `/api/v1/telemetry` instead of `/api/v1/telemetry/ingest`, rebuild the MSI, reinstall/upgrade the service, and verify WMI metrics reach TimescaleDB.
+- [x] Add and validate an elevation-safe 2.4.3 MSI upgrade wrapper because the connected shell is not Administrator and Windows Service Control Manager returned Access Denied.
+- [x] Validate enrollment-token format in the helper (`sp-enrol-<UUID>`) so an MSI builder key or unrelated 64-character secret cannot be written as an agent enrollment token.
+- [x] Align the frontend token generation client (`App.tsx`) with the backend Go endpoint (`/api/v1/enrollment-tokens`) so generated tokens correctly return `sp-enrol-<UUID>` instead of client-side random strings.
+- [x] Correct example script token format in `EndpointsList.tsx` from old random string to `sp-enrol-00000000-0000-0000-0000-000000000000`.
+- [x] Validate backend enrollment token creation (`CreateToken`) issues `sp-enrol-<UUID>` strings matching the agent and helper expectations.
