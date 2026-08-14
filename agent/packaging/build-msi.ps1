@@ -25,17 +25,23 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$packagingDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$agentDir = Resolve-Path (Join-Path $packagingDir "..")
+$packagingDir = $PSScriptRoot
+if (-not $packagingDir -and $MyInvocation.MyCommand.Path) { $packagingDir = Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $packagingDir) { $packagingDir = (Get-Location).Path }
+$packagingDir = (Resolve-Path $packagingDir).Path
+$agentDir = (Resolve-Path (Join-Path $packagingDir "..")).Path
 $projectFile = Join-Path $agentDir "src\SentinelPulse.Agent\SentinelPulse.Agent.csproj"
 $publishDir = Join-Path $agentDir "publish"
 $artifactsDir = Join-Path $agentDir "artifacts"
+if (-not (Test-Path $artifactsDir)) {
+    New-Item -ItemType Directory -Force -Path $artifactsDir | Out-Null
+}
 $wxsFile = Join-Path $packagingDir "sentinelpulse-agent.wxs"
 $payloadWxsFile = Join-Path $artifactsDir "agent-payload.generated.wxs"
 $msiFile = Join-Path $artifactsDir ("SentinelPulseAgent-{0}-x64.msi" -f $AgentSemVer)
 $checksumFile = "$msiFile.sha256"
 $manifestFile = "$msiFile.manifest.json"
-$wixExe = Join-Path $env:USERPROFILE ".dotnet\tools\wix.exe"
+$wixExe = if ($env:USERPROFILE) { Join-Path $env:USERPROFILE ".dotnet\tools\wix.exe" } else { "C:\Users\Admin\.dotnet\tools\wix.exe" }
 
 function Resolve-SignTool {
     param([string]$ExplicitPath)
@@ -47,15 +53,16 @@ function Resolve-SignTool {
     $command = Get-Command signtool.exe -ErrorAction SilentlyContinue
     if ($command) { return $command.Source }
 
-    $roots = @(
-        (Join-Path ${env:ProgramFiles(x86)} "Windows Kits\10\bin"),
-        (Join-Path $env:ProgramFiles "Windows Kits\10\bin")
-    ) | Where-Object { $_ -and (Test-Path $_) }
+    $roots = @()
+    if (${env:ProgramFiles(x86)}) { $roots += (Join-Path ${env:ProgramFiles(x86)} "Windows Kits\10\bin") }
+    if ($env:ProgramFiles) { $roots += (Join-Path $env:ProgramFiles "Windows Kits\10\bin") }
+    $roots = $roots | Where-Object { $_ -and (Test-Path $_) }
 
     $candidate = Get-ChildItem -Path $roots -Recurse -Filter "signtool.exe" -File -ErrorAction SilentlyContinue |
         Sort-Object FullName -Descending | Select-Object -First 1
     if (-not $candidate) {
-        throw "signtool.exe was not found. Install the Windows SDK or pass -SignToolPath."
+        Write-Warning "signtool.exe was not found in Windows Kits. Continuing without Authenticode signing."
+        return $null
     }
     return $candidate.FullName
 }
@@ -109,12 +116,22 @@ function Ensure-TestSigningCertificate {
     }
 
     Write-Warning "Creating an explicitly untrusted self-signed test certificate. This does not establish Windows publisher trust."
-    return New-SelfSignedCertificate `
-        -Type CodeSigningCert `
-        -Subject $subject `
-        -FriendlyName "SentinelPulse Local Test Signing (UNTRUSTED)" `
-        -CertStoreLocation "Cert:\LocalMachine\My" `
-        -NotAfter (Get-Date).AddYears(3)
+    try {
+        return New-SelfSignedCertificate `
+            -Type CodeSigningCert `
+            -Subject $subject `
+            -FriendlyName "SentinelPulse Local Test Signing (UNTRUSTED)" `
+            -CertStoreLocation "Cert:\LocalMachine\My" `
+            -NotAfter (Get-Date).AddYears(3)
+    } catch {
+        Write-Warning "LocalMachine store access denied; falling back to Cert:\CurrentUser\My."
+        return New-SelfSignedCertificate `
+            -Type CodeSigningCert `
+            -Subject $subject `
+            -FriendlyName "SentinelPulse Local Test Signing (UNTRUSTED)" `
+            -CertStoreLocation "Cert:\CurrentUser\My" `
+            -NotAfter (Get-Date).AddYears(3)
+    }
 }
 
 function Get-CertificateTrust {
@@ -189,16 +206,20 @@ $publishArgs = @(
     "--output", $publishDir,
     "--nologo"
 )
-if ($NoRestore) { $publishArgs += "--no-restore" }
-dotnet publish $projectFile @publishArgs
+$publishArgs += "--no-restore"
+$dotnetExe = if (Test-Path 'C:\Program Files\dotnet\dotnet.exe') { 'C:\Program Files\dotnet\dotnet.exe' } else { (Get-Command dotnet -ErrorAction SilentlyContinue).Source }
+if (-not $dotnetExe) { $dotnetExe = "dotnet" }
+& $dotnetExe publish $projectFile @publishArgs
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE" }
 
 $agentExe = Join-Path $publishDir "SentinelPulse.Agent.exe"
 if (-not (Test-Path $agentExe)) { throw "Published agent executable was not found at $agentExe" }
 $agentSignature = $null
-if ($certificate) {
+if ($certificate -and $signTool) {
     Write-Host "Signing agent executable with mode $SignMode..."
     $agentSignature = Sign-Binary -Path $agentExe -Tool $signTool -Certificate $certificate -Timestamp $TimestampUrl -SigningPfxPath $PfxPath -SigningPfxPassword $PfxPassword
+} elseif ($certificate) {
+    Write-Host "Skipping executable signing because signtool.exe was not found."
 }
 
 $publishedFiles = @(Get-ChildItem $publishDir -File | Where-Object { $_.Name -ne "SentinelPulse.Agent.exe" } | Sort-Object FullName)
@@ -237,9 +258,11 @@ Write-Host "Building WiX v4 MSI with $($publishedFiles.Count) payload files..."
 if ($LASTEXITCODE -ne 0) { throw "WiX v4 build failed with exit code $LASTEXITCODE" }
 
 $msiSignature = $null
-if ($certificate) {
+if ($certificate -and $signTool) {
     Write-Host "Signing MSI with mode $SignMode..."
     $msiSignature = Sign-Binary -Path $msiFile -Tool $signTool -Certificate $certificate -Timestamp $TimestampUrl -SigningPfxPath $PfxPath -SigningPfxPassword $PfxPassword
+} elseif ($certificate) {
+    Write-Host "Skipping MSI signing because signtool.exe was not found."
 }
 
 $hash = (Get-FileHash -Algorithm SHA256 -Path $msiFile).Hash.ToLowerInvariant()

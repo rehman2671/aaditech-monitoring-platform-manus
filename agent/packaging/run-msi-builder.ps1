@@ -109,14 +109,24 @@ function Send-Json {
 
 function Send-Heartbeat {
     $metadata = Get-TestOrTrustedCertificateMetadata -Mode $SigningMode -Thumbprint $CertificateThumbprint
-    Send-Json -Method Post -Path "/internal/msi-builder/heartbeat" -Body (@{
-        builder_id = $BuilderId
-        signing_mode = $SigningMode
-        certificate_subject = $metadata.certificate_subject
-        certificate_thumbprint = $metadata.certificate_thumbprint
-        certificate_expires_at = $metadata.certificate_expires_at
-        certificate_trusted = $metadata.certificate_trusted
-    }) | Out-Null
+    try {
+        Send-Json -Method Post -Path "/internal/msi-builder/heartbeat" -Body (@{
+            builder_id = $BuilderId
+            signing_mode = $SigningMode
+            certificate_subject = $metadata.certificate_subject
+            certificate_thumbprint = $metadata.certificate_thumbprint
+            certificate_expires_at = $metadata.certificate_expires_at
+            certificate_trusted = $metadata.certificate_trusted
+        }) | Out-Null
+    } catch {
+        $resp = $_.Exception.Response
+        if ($resp) {
+            $reader = New-Object System.IO.StreamReader($resp.GetResponseStream())
+            $bodyText = $reader.ReadToEnd()
+            Write-Error "Heartbeat failed ($($resp.StatusCode)): $bodyText"
+        }
+        throw $_
+    }
 }
 
 function Send-JobStatus {
