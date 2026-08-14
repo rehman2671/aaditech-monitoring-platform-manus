@@ -26,7 +26,7 @@ export default function EnrollmentTokens({ tokens, onCreateToken, canWrite, acce
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [agentVersion, setAgentVersion] = useState('2.4.4');
   const [apiBaseUrl, setApiBaseUrl] = useState(() => window.localStorage.getItem('sentinelpulse.apiBaseUrl') ?? 'http://127.0.0.1:8080');
-  const [endpointId, setEndpointId] = useState(() => window.localStorage.getItem('sentinelpulse.endpointId') ?? '');
+  const [endpointId, setEndpointId] = useState(() => window.localStorage.getItem('sentinelpulse.endpointId') ?? 'DESKTOP-WINDOWS');
   const [signMode, setSignMode] = useState<MSISignMode>('trusted');
   const [builderStatus, setBuilderStatus] = useState<MSIBuilderStatus | null>(null);
   const [builds, setBuilds] = useState<MSIBuildJob[]>([]);
