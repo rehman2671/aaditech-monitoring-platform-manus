@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -132,22 +133,31 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "BAD_REQUEST", "message": "Invalid login payload"}})
 		return
 	}
+	req.Email = strings.TrimSpace(req.Email)
 	var id int
-	var email, role, hash, orgID string
-	err := h.db.QueryRowContext(r.Context(), "SELECT u.id, u.email, u.role, u.password_hash, m.organization_id FROM users u LEFT JOIN memberships m ON m.user_id = u.id WHERE u.email = $1 OR u.open_id = $1 LIMIT 1", req.Email).Scan(&id, &email, &role, &hash, &orgID)
-	if err != nil || !auth.CheckPassword(req.Password, hash) {
+	var email, role, hash string
+	var orgID sql.NullString
+	err := h.db.QueryRowContext(r.Context(), "SELECT u.id, u.email, u.role, u.password_hash, COALESCE(m.organization_id, '') FROM users u LEFT JOIN memberships m ON m.user_id = u.id WHERE LOWER(u.email) = LOWER($1) OR u.open_id = $1 LIMIT 1", req.Email).Scan(&id, &email, &role, &hash, &orgID)
+	if err != nil {
+		log.Printf("[Auth] Login query error for %q: %v", req.Email, err)
 		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": map[string]string{"code": "UNAUTHORIZED", "message": "Invalid credentials"}})
 		return
 	}
-	var token string
-	if h.cfg.JwtPrivateKeyRS256 != "" && h.cfg.JwtPublicKeyRS256 != "" {
-		token, err = auth.GenerateTokenRS256(id, email, orgID, role, h.cfg.JwtPrivateKeyRS256, 15*time.Minute)
-	} else {
-		token, err = auth.GenerateToken(id, email, orgID, role, h.cfg.JwtSecret, 15*time.Minute)
-	}
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": map[string]string{"code": "TOKEN_ERROR", "message": "Unable to issue access token"}})
+	if !auth.CheckPassword(req.Password, hash) {
+		log.Printf("[Auth] Password check failed for user %q", req.Email)
+		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": map[string]string{"code": "UNAUTHORIZED", "message": "Invalid credentials"}})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"accessToken": token, "expiresAt": time.Now().UTC().Add(15 * time.Minute).Format(time.RFC3339), "user": map[string]any{"id": id, "email": email, "role": role, "organizationId": orgID}})
+	resolvedOrgID := orgID.String
+	var token string
+		if h.cfg.JwtPrivateKeyRS256 != "" && h.cfg.JwtPublicKeyRS256 != "" {
+			token, err = auth.GenerateTokenRS256(id, email, resolvedOrgID, role, h.cfg.JwtPrivateKeyRS256, 15*time.Minute)
+		} else {
+			token, err = auth.GenerateToken(id, email, resolvedOrgID, role, h.cfg.JwtSecret, 15*time.Minute)
+		}
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]any{"error": map[string]string{"code": "TOKEN_ERROR", "message": "Unable to issue access token"}})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"accessToken": token, "expiresAt": time.Now().UTC().Add(15 * time.Minute).Format(time.RFC3339), "user": map[string]any{"id": id, "email": email, "role": role, "organizationId": resolvedOrgID}})
 }
