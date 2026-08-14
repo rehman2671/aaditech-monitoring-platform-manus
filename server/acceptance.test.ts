@@ -31,11 +31,12 @@ describe("SentinelPulse End-to-End Acceptance Suite", () => {
     expect(Array.isArray(endpoints)).toBe(true);
   });
 
-  it("verifies MSI build request payload contract", async () => {
+  it("verifies local Go mode rejects the legacy tRPC MSI mutation", async () => {
     const caller = appRouter.createCaller(createAcceptanceContext('admin'));
-    const result = await caller.reports.buildMsi({ version: "2.4.1" });
-    expect(result).toBeDefined();
-    expect(["succeeded", "failed", "blocked"]).toContain(result.status);
+    await expect(caller.reports.buildMsi({ version: "2.4.1" })).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: 'MSI builds are handled by the authenticated Windows builder runner in the local Go deployment.',
+    });
   });
 
   it("verifies RBAC enforcement on administrative mutation", async () => {

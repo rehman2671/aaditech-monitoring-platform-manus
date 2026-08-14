@@ -20,8 +20,10 @@ param(
     [string]$CertificateThumbprint = $env:SENTINELPULSE_SIGNING_CERT_THUMBPRINT,
     [string]$PfxPath = $env:SIGNING_CERT_PFX_PATH,
     [string]$PfxPassword = $env:SIGNING_CERT_PASSWORD,
-    [string]$SignToolPath = "",
+    [string]$SignToolPath = $env:SENTINELPULSE_SIGNTOOL_PATH,
     [int]$PollSeconds = 5,
+    [int]$RetryCount = 3,
+    [int]$RetryDelaySeconds = 3,
     [switch]$Once
 )
 
@@ -46,6 +48,7 @@ if (Test-Path $deploymentEnvFile) {
     if ([string]::IsNullOrWhiteSpace($CertificateThumbprint)) { $CertificateThumbprint = Read-DeploymentEnvValue 'SENTINELPULSE_SIGNING_CERT_THUMBPRINT' }
     if ([string]::IsNullOrWhiteSpace($PfxPath)) { $PfxPath = Read-DeploymentEnvValue 'SIGNING_CERT_PFX_PATH' }
     if ([string]::IsNullOrWhiteSpace($PfxPassword)) { $PfxPassword = Read-DeploymentEnvValue 'SIGNING_CERT_PASSWORD' }
+    if ([string]::IsNullOrWhiteSpace($SignToolPath)) { $SignToolPath = Read-DeploymentEnvValue 'SENTINELPULSE_SIGNTOOL_PATH' }
 }
 if ([string]::IsNullOrWhiteSpace($BuilderKey)) { throw "MSI builder key is required; set MSI_BUILDER_KEY in deployment/.env or provision agent/config/msi-builder.key." }
 if ([string]::IsNullOrWhiteSpace($BuilderId)) { $BuilderId = "WINDOWS-BUILD-HOST" }
@@ -97,6 +100,18 @@ function Get-TestOrTrustedCertificateMetadata {
     }
 }
 
+function Get-ExceptionResponseBody {
+    param([System.Exception]$Exception)
+    $resp = $Exception.Response
+    if (-not $resp) { return $null }
+    try {
+        $reader = New-Object System.IO.StreamReader($resp.GetResponseStream())
+        return $reader.ReadToEnd()
+    } catch {
+        return $null
+    }
+}
+
 function Send-Json {
     param([string]$Method, [string]$Path, [object]$Body = $null)
     $params = @{ Method = $Method; Uri = "$base$Path"; Headers = $headers; UseBasicParsing = $true }
@@ -104,29 +119,30 @@ function Send-Json {
         $params.ContentType = "application/json"
         $params.Body = ($Body | ConvertTo-Json -Depth 8 -Compress)
     }
-    return Invoke-RestMethod @params
+    $attempts = [Math]::Max(1, $RetryCount)
+    for ($attempt = 1; $attempt -le $attempts; $attempt++) {
+        try {
+            return Invoke-RestMethod @params
+        } catch {
+            $responseBody = Get-ExceptionResponseBody -Exception $_.Exception
+            $detail = if ($responseBody) { "; response=$responseBody" } else { "" }
+            Write-Warning ("HTTP {0} {1} attempt {2}/{3} failed: {4}{5}" -f $Method, $Path, $attempt, $attempts, $_.Exception.Message, $detail)
+            if ($attempt -eq $attempts) { throw }
+            Start-Sleep -Seconds ([Math]::Max(1, $RetryDelaySeconds))
+        }
+    }
 }
 
 function Send-Heartbeat {
     $metadata = Get-TestOrTrustedCertificateMetadata -Mode $SigningMode -Thumbprint $CertificateThumbprint
-    try {
-        Send-Json -Method Post -Path "/internal/msi-builder/heartbeat" -Body (@{
-            builder_id = $BuilderId
-            signing_mode = $SigningMode
-            certificate_subject = $metadata.certificate_subject
-            certificate_thumbprint = $metadata.certificate_thumbprint
-            certificate_expires_at = $metadata.certificate_expires_at
-            certificate_trusted = $metadata.certificate_trusted
-        }) | Out-Null
-    } catch {
-        $resp = $_.Exception.Response
-        if ($resp) {
-            $reader = New-Object System.IO.StreamReader($resp.GetResponseStream())
-            $bodyText = $reader.ReadToEnd()
-            Write-Error "Heartbeat failed ($($resp.StatusCode)): $bodyText"
-        }
-        throw $_
-    }
+    Send-Json -Method Post -Path "/internal/msi-builder/heartbeat" -Body (@{
+        builder_id = $BuilderId
+        signing_mode = $SigningMode
+        certificate_subject = $metadata.certificate_subject
+        certificate_thumbprint = $metadata.certificate_thumbprint
+        certificate_expires_at = $metadata.certificate_expires_at
+        certificate_trusted = $metadata.certificate_trusted
+    }) | Out-Null
 }
 
 function Send-JobStatus {
@@ -156,9 +172,10 @@ function Process-OneJob {
     $response = Send-Json -Method Get -Path "/internal/msi-builder/next"
     if ($null -eq $response.job) { return $false }
     $job = $response.job
-    Send-JobStatus -JobId $job.id -Status "running"
+    Write-Host "Claimed MSI build job $($job.id) for version $($job.agent_version) ($($job.sign_mode))."
 
     try {
+        Send-JobStatus -JobId $job.id -Status "running"
         $arguments = @{
             Configuration = "Release"
             AgentVersion = $job.agent_version
@@ -187,7 +204,7 @@ function Process-OneJob {
     } catch {
         $message = $_.Exception.Message
         try { Send-JobStatus -JobId $job.id -Status "failed" -ErrorMessage $message } catch { Write-Warning "Could not report failed MSI job: $($_.Exception.Message)" }
-        Write-Error "MSI build $($job.id) failed: $message"
+        Write-Warning "MSI build $($job.id) failed: $message"
     }
     return $true
 }

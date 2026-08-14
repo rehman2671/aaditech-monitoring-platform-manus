@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,15 +21,15 @@ import (
 var semverPattern = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:[-+][0-9A-Za-z.-]+)?$`)
 
 const (
-	signModeTrusted     = "trusted"
-	signModeSelfTest    = "self_signed_test"
+	signModeTrusted      = "trusted"
+	signModeSelfTest     = "self_signed_test"
 	signModeUnsignedTest = "unsigned_test"
 )
 
 type MSIBuildHandler struct {
-	db           *sql.DB
-	artifactDir  string
-	builderKey   string
+	db          *sql.DB
+	artifactDir string
+	builderKey  string
 }
 
 func NewMSIBuildHandler(db *sql.DB, artifactDir, builderKey string) *MSIBuildHandler {
@@ -62,39 +63,39 @@ type msiBuildJob struct {
 }
 
 type msiBuilderStatus struct {
-	Available              bool    `json:"available"`
-	BuilderID              *string `json:"builder_id,omitempty"`
-	LastSeenAt             *string `json:"last_seen_at,omitempty"`
-	SigningMode            string  `json:"signing_mode"`
-	CertificateSubject     *string `json:"certificate_subject,omitempty"`
-	CertificateThumbprint  *string `json:"certificate_thumbprint,omitempty"`
-	CertificateExpiresAt   *string `json:"certificate_expires_at,omitempty"`
-	CertificateTrusted     bool    `json:"certificate_trusted"`
-	Message                string  `json:"message"`
+	Available             bool    `json:"available"`
+	BuilderID             *string `json:"builder_id,omitempty"`
+	LastSeenAt            *string `json:"last_seen_at,omitempty"`
+	SigningMode           string  `json:"signing_mode"`
+	CertificateSubject    *string `json:"certificate_subject,omitempty"`
+	CertificateThumbprint *string `json:"certificate_thumbprint,omitempty"`
+	CertificateExpiresAt  *string `json:"certificate_expires_at,omitempty"`
+	CertificateTrusted    bool    `json:"certificate_trusted"`
+	Message               string  `json:"message"`
 }
 
 type msiBuilderHeartbeat struct {
-	BuilderID              string  `json:"builder_id"`
-	SigningMode            string  `json:"signing_mode"`
-	CertificateSubject     *string `json:"certificate_subject,omitempty"`
-	CertificateThumbprint  *string `json:"certificate_thumbprint,omitempty"`
-	CertificateExpiresAt   *string `json:"certificate_expires_at,omitempty"`
-	CertificateTrusted     bool    `json:"certificate_trusted"`
+	BuilderID             string  `json:"builder_id"`
+	SigningMode           string  `json:"signing_mode"`
+	CertificateSubject    *string `json:"certificate_subject,omitempty"`
+	CertificateThumbprint *string `json:"certificate_thumbprint,omitempty"`
+	CertificateExpiresAt  *string `json:"certificate_expires_at,omitempty"`
+	CertificateTrusted    bool    `json:"certificate_trusted"`
 }
 
 type msiBuildStatusUpdate struct {
-	JobID                  string  `json:"job_id"`
-	Status                 string  `json:"status"`
-	ErrorMessage           *string `json:"error_message,omitempty"`
-	ArtifactFilename       *string `json:"artifact_filename,omitempty"`
-	ChecksumFilename       *string `json:"checksum_filename,omitempty"`
-	SHA256                 *string `json:"sha256,omitempty"`
-	IsSigned               bool    `json:"is_signed"`
-	CertificateSubject     *string `json:"certificate_subject,omitempty"`
-	CertificateThumbprint  *string `json:"certificate_thumbprint,omitempty"`
-	CertificateExpiresAt   *string `json:"certificate_expires_at,omitempty"`
-	CertificateTrusted     bool    `json:"certificate_trusted"`
-	SizeBytes              int64   `json:"size_bytes"`
+	JobID                 string  `json:"job_id"`
+	Status                string  `json:"status"`
+	ErrorMessage          *string `json:"error_message,omitempty"`
+	ArtifactFilename      *string `json:"artifact_filename,omitempty"`
+	ChecksumFilename      *string `json:"checksum_filename,omitempty"`
+	SHA256                *string `json:"sha256,omitempty"`
+	IsSigned              bool    `json:"is_signed"`
+	CertificateSubject    *string `json:"certificate_subject,omitempty"`
+	CertificateThumbprint *string `json:"certificate_thumbprint,omitempty"`
+	CertificateExpiresAt  *string `json:"certificate_expires_at,omitempty"`
+	CertificateTrusted    bool    `json:"certificate_trusted"`
+	SizeBytes             int64   `json:"size_bytes"`
 }
 
 func (h *MSIBuildHandler) AdminStatus(w http.ResponseWriter, r *http.Request) {
@@ -102,7 +103,9 @@ func (h *MSIBuildHandler) AdminStatus(w http.ResponseWriter, r *http.Request) {
 		methodNotAllowed(w)
 		return
 	}
-	if !requireAdmin(w, r) { return }
+	if !requireAdmin(w, r) {
+		return
+	}
 
 	var status msiBuilderStatus
 	var builderID, lastSeen, subject, thumbprint, expires sql.NullString
@@ -118,7 +121,10 @@ func (h *MSIBuildHandler) AdminStatus(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, status)
 		return
 	}
-	if err != nil { http.Error(w, "Failed to read MSI builder status", http.StatusInternalServerError); return }
+	if err != nil {
+		http.Error(w, "Failed to read MSI builder status", http.StatusInternalServerError)
+		return
+	}
 
 	status.Available = h.builderKey != "" && lastSeen.Valid && time.Since(parseTime(lastSeen.String)) < 5*time.Minute
 	status.BuilderID = nullStringPtr(builderID)
@@ -128,12 +134,16 @@ func (h *MSIBuildHandler) AdminStatus(w http.ResponseWriter, r *http.Request) {
 	status.CertificateExpiresAt = nullStringPtr(expires)
 	status.CertificateTrusted = trusted
 	status.Message = "Windows build runner is offline"
-	if status.Available { status.Message = "Windows build runner is online" }
+	if status.Available {
+		status.Message = "Windows build runner is online"
+	}
 	writeJSON(w, http.StatusOK, status)
 }
 
 func (h *MSIBuildHandler) ListOrCreate(w http.ResponseWriter, r *http.Request) {
-	if !requireAdmin(w, r) { return }
+	if !requireAdmin(w, r) {
+		return
+	}
 	switch r.Method {
 	case http.MethodGet:
 		h.listBuilds(w, r)
@@ -146,10 +156,18 @@ func (h *MSIBuildHandler) ListOrCreate(w http.ResponseWriter, r *http.Request) {
 
 func (h *MSIBuildHandler) createBuild(w http.ResponseWriter, r *http.Request) {
 	var req msiBuildRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil { http.Error(w, "Invalid JSON request", http.StatusBadRequest); return }
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON request", http.StatusBadRequest)
+		return
+	}
 	req.AgentVersion = strings.TrimSpace(req.AgentVersion)
-	if !semverPattern.MatchString(req.AgentVersion) { http.Error(w, "agent_version must be semantic version x.y.z", http.StatusBadRequest); return }
-	if req.SignMode == "" { req.SignMode = signModeTrusted }
+	if !semverPattern.MatchString(req.AgentVersion) {
+		http.Error(w, "agent_version must be semantic version x.y.z", http.StatusBadRequest)
+		return
+	}
+	if req.SignMode == "" {
+		req.SignMode = signModeTrusted
+	}
 	if req.SignMode != signModeTrusted && req.SignMode != signModeSelfTest && req.SignMode != signModeUnsignedTest {
 		http.Error(w, "Unsupported sign_mode", http.StatusBadRequest)
 		return
@@ -164,7 +182,10 @@ func (h *MSIBuildHandler) createBuild(w http.ResponseWriter, r *http.Request) {
 	_, err := h.db.ExecContext(r.Context(), `
 		INSERT INTO msi_build_jobs (id, tenant_id, requested_by, agent_version, sign_mode, status)
 		VALUES ($1, $2, $3, $4, $5, 'pending')`, jobID, claims.OrganizationID, claims.UserID, req.AgentVersion, req.SignMode)
-	if err != nil { http.Error(w, "Failed to queue MSI build: "+err.Error(), http.StatusInternalServerError); return }
+	if err != nil {
+		http.Error(w, "Failed to queue MSI build: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	writeJSON(w, http.StatusAccepted, map[string]any{"job_id": jobID, "status": "pending", "message": "Build queued for the Windows runner"})
 }
 
@@ -178,36 +199,62 @@ func (h *MSIBuildHandler) listBuilds(w http.ResponseWriter, r *http.Request) {
 		       to_char(started_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
 		       to_char(completed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
 		FROM msi_build_jobs WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50`, claims.OrganizationID)
-	if err != nil { http.Error(w, "Failed to list MSI builds", http.StatusInternalServerError); return }
+	if err != nil {
+		http.Error(w, "Failed to list MSI builds", http.StatusInternalServerError)
+		return
+	}
 	defer rows.Close()
 
 	jobs := make([]msiBuildJob, 0)
 	for rows.Next() {
 		job, err := scanMSIBuild(rows)
-		if err != nil { http.Error(w, "Failed to decode MSI build record", http.StatusInternalServerError); return }
+		if err != nil {
+			http.Error(w, "Failed to decode MSI build record", http.StatusInternalServerError)
+			return
+		}
 		jobs = append(jobs, job)
 	}
-	if err := rows.Err(); err != nil { http.Error(w, "Failed to read MSI builds", http.StatusInternalServerError); return }
+	if err := rows.Err(); err != nil {
+		http.Error(w, "Failed to read MSI builds", http.StatusInternalServerError)
+		return
+	}
 	writeJSON(w, http.StatusOK, jobs)
 }
 
 func (h *MSIBuildHandler) Detail(w http.ResponseWriter, r *http.Request) {
-	if !requireAdmin(w, r) { return }
+	if !requireAdmin(w, r) {
+		return
+	}
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1/admin/msi-builds/")
 	parts := strings.Split(strings.Trim(path, "/"), "/")
-	if len(parts) == 0 || parts[0] == "" { http.NotFound(w, r); return }
+	if len(parts) == 0 || parts[0] == "" {
+		http.NotFound(w, r)
+		return
+	}
 	jobID := parts[0]
 	if len(parts) == 2 && parts[1] == "download" {
-		if r.Method != http.MethodGet { methodNotAllowed(w); return }
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
 		h.download(w, r, jobID)
 		return
 	}
-	if len(parts) != 1 || r.Method != http.MethodGet { http.NotFound(w, r); return }
+	if len(parts) != 1 || r.Method != http.MethodGet {
+		http.NotFound(w, r)
+		return
+	}
 
 	claims := claimsFromRequest(r)
 	job, err := h.getBuild(r, jobID, claims.OrganizationID)
-	if errors.Is(err, sql.ErrNoRows) { http.NotFound(w, r); return }
-	if err != nil { http.Error(w, "Failed to read MSI build", http.StatusInternalServerError); return }
+	if errors.Is(err, sql.ErrNoRows) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, "Failed to read MSI build", http.StatusInternalServerError)
+		return
+	}
 	writeJSON(w, http.StatusOK, job)
 }
 
@@ -215,24 +262,42 @@ func (h *MSIBuildHandler) Detail(w http.ResponseWriter, r *http.Request) {
 // It is separate from job downloads so an existing verified artifact remains
 // downloadable even when the job history is empty or was migrated.
 func (h *MSIBuildHandler) DownloadLatest(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet { methodNotAllowed(w); return }
-	if !requireAdmin(w, r) { return }
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	if !requireAdmin(w, r) {
+		return
+	}
 	entries, err := os.ReadDir(h.artifactDir)
-	if err != nil { http.Error(w, "MSI artifact directory is unavailable", http.StatusNotFound); return }
+	if err != nil {
+		http.Error(w, "MSI artifact directory is unavailable", http.StatusNotFound)
+		return
+	}
 	var newest os.FileInfo
 	var newestName string
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(strings.ToLower(entry.Name()), ".msi") { continue }
+		if entry.IsDir() || !strings.HasSuffix(strings.ToLower(entry.Name()), ".msi") {
+			continue
+		}
 		info, statErr := entry.Info()
-		if statErr != nil { continue }
+		if statErr != nil {
+			continue
+		}
 		if newest == nil || info.ModTime().After(newest.ModTime()) {
 			newest = info
 			newestName = filepath.Base(entry.Name())
 		}
 	}
-	if newest == nil { http.Error(w, "No compiled MSI artifact is available", http.StatusNotFound); return }
+	if newest == nil {
+		http.Error(w, "No compiled MSI artifact is available", http.StatusNotFound)
+		return
+	}
 	file, err := os.Open(filepath.Join(h.artifactDir, newestName))
-	if err != nil { http.Error(w, "MSI artifact is not present on the Windows host", http.StatusNotFound); return }
+	if err != nil {
+		http.Error(w, "MSI artifact is not present on the Windows host", http.StatusNotFound)
+		return
+	}
 	defer file.Close()
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, newestName))
@@ -242,9 +307,18 @@ func (h *MSIBuildHandler) DownloadLatest(w http.ResponseWriter, r *http.Request)
 func (h *MSIBuildHandler) download(w http.ResponseWriter, r *http.Request, jobID string) {
 	claims := claimsFromRequest(r)
 	job, err := h.getBuild(r, jobID, claims.OrganizationID)
-	if errors.Is(err, sql.ErrNoRows) { http.NotFound(w, r); return }
-	if err != nil { http.Error(w, "Failed to read MSI build", http.StatusInternalServerError); return }
-	if job.Status != "succeeded" || job.ArtifactFilename == nil { http.Error(w, "MSI artifact is not available", http.StatusConflict); return }
+	if errors.Is(err, sql.ErrNoRows) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, "Failed to read MSI build", http.StatusInternalServerError)
+		return
+	}
+	if job.Status != "succeeded" || job.ArtifactFilename == nil {
+		http.Error(w, "MSI artifact is not available", http.StatusConflict)
+		return
+	}
 
 	filename := filepath.Base(*job.ArtifactFilename)
 	if filename != *job.ArtifactFilename || !strings.HasSuffix(strings.ToLower(filename), ".msi") {
@@ -253,20 +327,34 @@ func (h *MSIBuildHandler) download(w http.ResponseWriter, r *http.Request, jobID
 	}
 	path := filepath.Join(h.artifactDir, filename)
 	file, err := os.Open(path)
-	if err != nil { http.Error(w, "MSI artifact is not present on the Windows host", http.StatusNotFound); return }
+	if err != nil {
+		http.Error(w, "MSI artifact is not present on the Windows host", http.StatusNotFound)
+		return
+	}
 	defer file.Close()
 	stat, err := file.Stat()
-	if err != nil { http.Error(w, "Failed to inspect MSI artifact", http.StatusInternalServerError); return }
+	if err != nil {
+		http.Error(w, "Failed to inspect MSI artifact", http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 	http.ServeContent(w, r, filename, stat.ModTime(), file)
 }
 
 func (h *MSIBuildHandler) InternalHeartbeat(w http.ResponseWriter, r *http.Request) {
-	if !h.authorizeBuilder(w, r) { return }
-	if r.Method != http.MethodPost { methodNotAllowed(w); return }
+	if !h.authorizeBuilder(w, r) {
+		return
+	}
+	if r.Method != http.MethodPost {
+		methodNotAllowed(w)
+		return
+	}
 	var req msiBuilderHeartbeat
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.BuilderID) == "" { http.Error(w, "Invalid builder heartbeat", http.StatusBadRequest); return }
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.BuilderID) == "" {
+		http.Error(w, "Invalid builder heartbeat", http.StatusBadRequest)
+		return
+	}
 	_, err := h.db.ExecContext(r.Context(), `
 		INSERT INTO msi_builder_status (id, builder_id, last_seen_at, signing_mode, certificate_subject,
 		 certificate_thumbprint, certificate_expires_at, certificate_trusted)
@@ -276,16 +364,36 @@ func (h *MSIBuildHandler) InternalHeartbeat(w http.ResponseWriter, r *http.Reque
 		 certificate_thumbprint = EXCLUDED.certificate_thumbprint, certificate_expires_at = EXCLUDED.certificate_expires_at,
 		 certificate_trusted = EXCLUDED.certificate_trusted`, req.BuilderID, req.SigningMode, req.CertificateSubject,
 		req.CertificateThumbprint, req.CertificateExpiresAt, req.CertificateTrusted)
-	if err != nil { http.Error(w, "Failed to record builder heartbeat", http.StatusInternalServerError); return }
+	if err != nil {
+		log.Printf("msi builder heartbeat persistence failed for builder %s: %v", req.BuilderID, err)
+		http.Error(w, "Failed to record builder heartbeat", http.StatusInternalServerError)
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (h *MSIBuildHandler) InternalNext(w http.ResponseWriter, r *http.Request) {
-	if !h.authorizeBuilder(w, r) { return }
-	if r.Method != http.MethodGet { methodNotAllowed(w); return }
+	if !h.authorizeBuilder(w, r) {
+		return
+	}
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
 	ctx := r.Context()
+	// A crashed Windows runner can leave a claimed job in running forever.
+	// Requeue only claims older than the bounded lease so active builds are not interrupted.
+	if _, requeueErr := h.db.ExecContext(ctx, `
+		UPDATE msi_build_jobs
+		SET status = 'pending', started_at = NULL, error_message = 'Requeued after the Windows builder lease expired'
+		WHERE status = 'running' AND started_at < NOW() - INTERVAL '15 minutes'`); requeueErr != nil {
+		log.Printf("msi builder stale-job recovery failed: %v", requeueErr)
+	}
 	tx, err := h.db.BeginTx(ctx, nil)
-	if err != nil { http.Error(w, "Failed to claim MSI build", http.StatusInternalServerError); return }
+	if err != nil {
+		http.Error(w, "Failed to claim MSI build", http.StatusInternalServerError)
+		return
+	}
 	defer tx.Rollback()
 	var job msiBuildJob
 	var errMessage, artifact, checksum, sha, subject, thumbprint, expires, started, completed sql.NullString
@@ -304,32 +412,58 @@ func (h *MSIBuildHandler) InternalNext(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"job": nil})
 		return
 	}
-	if err != nil { http.Error(w, "Failed to read pending MSI build", http.StatusInternalServerError); return }
+	if err != nil {
+		log.Printf("msi builder claim query failed: %v", err)
+		http.Error(w, "Failed to read pending MSI build", http.StatusInternalServerError)
+		return
+	}
 	job.Status = "running"
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	job.StartedAt = &now
 	if _, err = tx.ExecContext(ctx, `UPDATE msi_build_jobs SET status = 'running', started_at = NOW() WHERE id = $1`, job.ID); err != nil {
-		http.Error(w, "Failed to claim pending MSI build", http.StatusInternalServerError); return
+		http.Error(w, "Failed to claim pending MSI build", http.StatusInternalServerError)
+		return
 	}
-	if err = tx.Commit(); err != nil { http.Error(w, "Failed to commit MSI build claim", http.StatusInternalServerError); return }
+	if err = tx.Commit(); err != nil {
+		log.Printf("msi builder claim commit failed for job %s: %v", job.ID, err)
+		http.Error(w, "Failed to commit MSI build claim", http.StatusInternalServerError)
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"job": job})
 }
 
 func (h *MSIBuildHandler) InternalStatus(w http.ResponseWriter, r *http.Request) {
-	if !h.authorizeBuilder(w, r) { return }
-	if r.Method != http.MethodPost { methodNotAllowed(w); return }
+	if !h.authorizeBuilder(w, r) {
+		return
+	}
+	if r.Method != http.MethodPost {
+		methodNotAllowed(w)
+		return
+	}
 	var req msiBuildStatusUpdate
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.JobID == "" { http.Error(w, "Invalid MSI build status update", http.StatusBadRequest); return }
-	if req.Status != "running" && req.Status != "succeeded" && req.Status != "failed" { http.Error(w, "Invalid MSI build status", http.StatusBadRequest); return }
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.JobID == "" {
+		http.Error(w, "Invalid MSI build status update", http.StatusBadRequest)
+		return
+	}
+	if req.Status != "running" && req.Status != "succeeded" && req.Status != "failed" {
+		http.Error(w, "Invalid MSI build status", http.StatusBadRequest)
+		return
+	}
 	_, err := h.db.ExecContext(r.Context(), `
-		UPDATE msi_build_jobs SET status = $2, error_message = $3, artifact_filename = $4,
-		 checksum_filename = $5, sha256 = $6, is_signed = $7, certificate_subject = $8,
-		 certificate_thumbprint = $9, certificate_expires_at = $10, certificate_trusted = $11,
-		 size_bytes = $12, completed_at = CASE WHEN $2 IN ('succeeded', 'failed') THEN NOW() ELSE completed_at END
+					UPDATE msi_build_jobs SET status = $2::varchar, error_message = $3, artifact_filename = $4,
+			 checksum_filename = $5, sha256 = $6, is_signed = $7, certificate_subject = $8,
+			 certificate_thumbprint = $9, certificate_expires_at = $10, certificate_trusted = $11,
+			 size_bytes = $12, completed_at = CASE WHEN $2::varchar IN ('succeeded', 'failed') THEN NOW() ELSE completed_at END
+
 		WHERE id = $1`, req.JobID, req.Status, req.ErrorMessage, req.ArtifactFilename, req.ChecksumFilename,
 		req.SHA256, req.IsSigned, req.CertificateSubject, req.CertificateThumbprint, req.CertificateExpiresAt,
 		req.CertificateTrusted, req.SizeBytes)
-	if err != nil { http.Error(w, "Failed to update MSI build status", http.StatusInternalServerError); return }
+	if err != nil {
+		log.Printf("msi builder status update failed for job %s: %v", req.JobID, err)
+		http.Error(w, "Failed to update MSI build status", http.StatusInternalServerError)
+		return
+	}
+
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
@@ -348,7 +482,10 @@ func (h *MSIBuildHandler) authorizeBuilder(w http.ResponseWriter, r *http.Reques
 
 func requireAdmin(w http.ResponseWriter, r *http.Request) bool {
 	claims := claimsFromRequest(r)
-	if claims == nil || claims.Role != "admin" { http.Error(w, "Forbidden: Admin role required", http.StatusForbidden); return false }
+	if claims == nil || claims.Role != "admin" {
+		http.Error(w, "Forbidden: Admin role required", http.StatusForbidden)
+		return false
+	}
 	return true
 }
 
@@ -371,7 +508,9 @@ func (h *MSIBuildHandler) getBuild(r *http.Request, id, tenant string) (msiBuild
 		&job.ID, &job.OrganizationID, &job.AgentVersion, &job.SignMode, &job.Status, &errMessage,
 		&artifact, &checksum, &sha, &job.IsSigned, &subject, &thumbprint, &expires, &job.CertificateTrusted,
 		&job.SizeBytes, &job.CreatedAt, &started, &completed)
-	if err != nil { return job, err }
+	if err != nil {
+		return job, err
+	}
 	job.ErrorMessage = nullStringPtr(errMessage)
 	job.ArtifactFilename = nullStringPtr(artifact)
 	job.ChecksumFilename = nullStringPtr(checksum)
@@ -390,7 +529,9 @@ func scanMSIBuild(scanner interface{ Scan(...any) error }) (msiBuildJob, error) 
 	err := scanner.Scan(&job.ID, &job.OrganizationID, &job.AgentVersion, &job.SignMode, &job.Status, &errMessage,
 		&artifact, &checksum, &sha, &job.IsSigned, &subject, &thumbprint, &expires, &job.CertificateTrusted,
 		&job.SizeBytes, &job.CreatedAt, &started, &completed)
-	if err != nil { return job, err }
+	if err != nil {
+		return job, err
+	}
 	job.ErrorMessage = nullStringPtr(errMessage)
 	job.ArtifactFilename = nullStringPtr(artifact)
 	job.ChecksumFilename = nullStringPtr(checksum)
@@ -404,20 +545,27 @@ func scanMSIBuild(scanner interface{ Scan(...any) error }) (msiBuildJob, error) 
 }
 
 func nullStringPtr(value sql.NullString) *string {
-	if !value.Valid { return nil }
+	if !value.Valid {
+		return nil
+	}
 	return &value.String
 }
 
 func parseTime(value string) time.Time {
 	parsed, err := time.Parse(time.RFC3339Nano, value)
-	if err != nil { return time.Unix(0, 0) }
+	if err != nil {
+		return time.Unix(0, 0)
+	}
 	return parsed
 }
 
 func builderUnavailableMessage(key string) string {
-	if key == "" { return "Configure MSI_BUILDER_KEY and start the Windows build runner." }
+	if key == "" {
+		return "Configure MSI_BUILDER_KEY and start the Windows build runner."
+	}
 	return "Windows build runner has not sent a heartbeat yet."
 }
 
-func methodNotAllowed(w http.ResponseWriter) { http.Error(w, "Method not allowed", http.StatusMethodNotAllowed) }
-
+func methodNotAllowed(w http.ResponseWriter) {
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+}

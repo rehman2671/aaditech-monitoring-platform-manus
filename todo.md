@@ -176,3 +176,12 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Inspect local Windows desktop state: verified `deployment/.env`, `MSI_BUILDER_KEY`, backend container logs, and runner script errors.
 - [x] Start the local Windows runner in continuous polling mode (`run-msi-builder.ps1`) directly on the connected host.
 - [x] Confirm the pending job transitions to `succeeded`, generates the signed MSI, and makes download/telemetry fully operational on `http://10.73.99.58:3001`.
+
+## MSI runner stuck-job repair — 2026-08-14
+- [x] Audit the connected Windows host runner, Visual Studio signing tools, environment variables, and current pending/running MSI jobs.
+- [x] Fix runner/build error propagation and retry/claim behavior so jobs cannot remain indefinitely pending or running after a failed build/sign step.
+- [ ] Validate a real signed MSI build using the available Visual Studio Windows SDK signing tools, then verify portal download, signature status, and endpoint telemetry.
+- [ ] Verify the authenticated latest-MSI download in the connected Windows browser after refreshing the `/tokens` page.
+- [ ] Configure the installed agent with a tenant-scoped enrollment token, restart the service, and verify endpoint plus real WMI metrics appear in the local database/dashboard.
+- [x] Add and validate a Command-Prompt-safe enrollment helper so operators can set the token without accidentally entering PowerShell commands into cmd.exe; PowerShell 5.1 help parsing passed without writing a token.
+- [x] Update the acceptance test that still expects the removed local tRPC MSI build mutation; it now asserts the documented `PRECONDITION_FAILED` contract.

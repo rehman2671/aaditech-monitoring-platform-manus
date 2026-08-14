@@ -20,7 +20,7 @@ param(
     [string]$PfxPath = $env:SIGNING_CERT_PFX_PATH,
     [string]$PfxPassword = $env:SIGNING_CERT_PASSWORD,
     [string]$SignToolPath = "",
-    [string]$TimestampUrl = "https://timestamp.digicert.com",
+    [string]$TimestampUrl = "http://timestamp.digicert.com",
     [switch]$NoRestore
 )
 
@@ -54,9 +54,19 @@ function Resolve-SignTool {
     if ($command) { return $command.Source }
 
     $roots = @()
-    if (${env:ProgramFiles(x86)}) { $roots += (Join-Path ${env:ProgramFiles(x86)} "Windows Kits\10\bin") }
-    if ($env:ProgramFiles) { $roots += (Join-Path $env:ProgramFiles "Windows Kits\10\bin") }
-    $roots = $roots | Where-Object { $_ -and (Test-Path $_) }
+    if (${env:ProgramFiles(x86)}) {
+        $roots += (Join-Path ${env:ProgramFiles(x86)} "Windows Kits\10\bin")
+        $roots += (Join-Path ${env:ProgramFiles(x86)} "Windows Kits\10\App Certification Kit")
+    }
+    if ($env:ProgramFiles) {
+        $roots += (Join-Path $env:ProgramFiles "Windows Kits\10\bin")
+        $roots += (Join-Path $env:ProgramFiles "Windows Kits\10\App Certification Kit")
+    }
+    if ($env:WindowsSdkDir) { $roots += (Join-Path $env:WindowsSdkDir "bin") }
+    if ($env:WindowsSdkDir -and $env:WindowsSDKVersion) { $roots += (Join-Path (Join-Path $env:WindowsSdkDir $env:WindowsSDKVersion) "bin") }
+    $workspaceTools = Join-Path $packagingDir "..\tools\windows-sdk"
+    if (Test-Path $workspaceTools) { $roots += $workspaceTools }
+    $roots = $roots | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
 
     $candidate = Get-ChildItem -Path $roots -Recurse -Filter "signtool.exe" -File -ErrorAction SilentlyContinue |
         Sort-Object FullName -Descending | Select-Object -First 1
@@ -187,6 +197,7 @@ if ($SignMode -eq "trusted") {
     $certificateTrusted = Get-CertificateTrust -Certificate $certificate
     if (-not $certificateTrusted) { throw "The selected certificate is not trusted by this Windows host; production signing is blocked." }
     $signTool = Resolve-SignTool -ExplicitPath $SignToolPath
+    if (-not $signTool) { throw "Trusted signing requires signtool.exe. Install the Windows SDK or set SENTINELPULSE_SIGNTOOL_PATH." }
 } elseif ($SignMode -eq "self_signed_test") {
     $certificate = Ensure-TestSigningCertificate
     $certificateTrusted = $false
@@ -214,10 +225,11 @@ if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXIT
 
 $agentExe = Join-Path $publishDir "SentinelPulse.Agent.exe"
 if (-not (Test-Path $agentExe)) { throw "Published agent executable was not found at $agentExe" }
+$timestampForBuild = if ($SignMode -eq "self_signed_test") { $null } else { $TimestampUrl }
 $agentSignature = $null
 if ($certificate -and $signTool) {
     Write-Host "Signing agent executable with mode $SignMode..."
-    $agentSignature = Sign-Binary -Path $agentExe -Tool $signTool -Certificate $certificate -Timestamp $TimestampUrl -SigningPfxPath $PfxPath -SigningPfxPassword $PfxPassword
+    $agentSignature = Sign-Binary -Path $agentExe -Tool $signTool -Certificate $certificate -Timestamp $timestampForBuild -SigningPfxPath $PfxPath -SigningPfxPassword $PfxPassword
 } elseif ($certificate) {
     Write-Host "Skipping executable signing because signtool.exe was not found."
 }
@@ -260,7 +272,7 @@ if ($LASTEXITCODE -ne 0) { throw "WiX v4 build failed with exit code $LASTEXITCO
 $msiSignature = $null
 if ($certificate -and $signTool) {
     Write-Host "Signing MSI with mode $SignMode..."
-    $msiSignature = Sign-Binary -Path $msiFile -Tool $signTool -Certificate $certificate -Timestamp $TimestampUrl -SigningPfxPath $PfxPath -SigningPfxPassword $PfxPassword
+    $msiSignature = Sign-Binary -Path $msiFile -Tool $signTool -Certificate $certificate -Timestamp $timestampForBuild -SigningPfxPath $PfxPath -SigningPfxPassword $PfxPassword
 } elseif ($certificate) {
     Write-Host "Skipping MSI signing because signtool.exe was not found."
 }
