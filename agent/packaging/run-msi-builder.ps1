@@ -48,7 +48,7 @@ if (Test-Path $deploymentEnvFile) {
     if ([string]::IsNullOrWhiteSpace($PfxPassword)) { $PfxPassword = Read-DeploymentEnvValue 'SIGNING_CERT_PASSWORD' }
 }
 if ([string]::IsNullOrWhiteSpace($BuilderKey)) { throw "MSI builder key is required; set MSI_BUILDER_KEY in deployment/.env or provision agent/config/msi-builder.key." }
-if ([string]::IsNullOrWhiteSpace($BuilderId)) { throw "BuilderId is required." }
+if ([string]::IsNullOrWhiteSpace($BuilderId)) { $BuilderId = "WINDOWS-BUILD-HOST" }
 
 $base = $ApiBaseUrl.TrimEnd('/')
 $headers = @{ "X-SentinelPulse-Builder-Key" = $BuilderKey }

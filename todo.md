@@ -161,3 +161,13 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 ## Parameter Default Root Resolution Fix — 2026-08-14
 - [x] Move ProjectRoot resolution out of parameter defaults into the script body so `$PSScriptRoot` resolves correctly.
 - [x] Test key generation on the Windows host and verify `deployment/.env` is written successfully.
+
+## PowerShell 5.1 Crypto Compatibility Fix — 2026-08-14
+- [ ] Replace `[System.Security.Cryptography.RandomNumberGenerator]::Fill()` with PowerShell 5.1 compatible `.GetBytes()` in `generate-builder-key.ps1`.
+- [ ] Execute key generation directly on the connected Windows desktop session via the shell tool.
+- [ ] Start the runner in the background on the Windows desktop session and verify backend status reporting.
+
+## Persistent Runner & Online Status Improvements — 2026-08-14
+- [x] Extend backend runner online timeout window from 2 minutes to 5 minutes so background polling does not flicker offline.
+- [x] Run the Windows runner in continuous background polling mode without `-Once`.
+- [x] Queue a test build in the dashboard, verify the runner picks it up, compiles, signs with self-signed test mode, and generates a downloadable artifact.

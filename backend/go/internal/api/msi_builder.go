@@ -120,7 +120,7 @@ func (h *MSIBuildHandler) AdminStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil { http.Error(w, "Failed to read MSI builder status", http.StatusInternalServerError); return }
 
-	status.Available = h.builderKey != "" && lastSeen.Valid && time.Since(parseTime(lastSeen.String)) < 2*time.Minute
+	status.Available = h.builderKey != "" && lastSeen.Valid && time.Since(parseTime(lastSeen.String)) < 5*time.Minute
 	status.BuilderID = nullStringPtr(builderID)
 	status.LastSeenAt = nullStringPtr(lastSeen)
 	status.CertificateSubject = nullStringPtr(subject)

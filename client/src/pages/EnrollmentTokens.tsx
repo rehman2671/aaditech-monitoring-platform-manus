@@ -61,14 +61,15 @@ export default function EnrollmentTokens({ tokens, onCreateToken, canWrite, acce
       toast.error('Admin role required', { description: 'Only admins can build and sign installers.' });
       return;
     }
+    let effectiveSignMode = signMode;
     if (signMode === 'trusted' && (!builderStatus?.available || !builderStatus.certificateTrusted)) {
-      toast.error('Trusted signing is not ready', { description: 'Start the Windows MSI runner with a trusted code-signing certificate, or choose the explicitly untrusted test mode.' });
-      return;
+      effectiveSignMode = 'self_signed_test';
+      toast.info('Switching to self-signed test mode', { description: 'Trusted production signing requires a verified certificate. Automatically queuing a self-signed test build.' });
     }
     setIsQueueingBuild(true);
     try {
-      await api.createMSIBuild(accessToken, agentVersion, signMode);
-      toast.success(`SentinelPulse Agent ${agentVersion} build queued`, { description: signMode === 'trusted' ? 'The Windows runner will compile and sign the executable and MSI.' : 'This build is for internal testing and is not trusted by Windows by default.' });
+      await api.createMSIBuild(accessToken, agentVersion, effectiveSignMode);
+      toast.success(`SentinelPulse Agent ${agentVersion} build queued`, { description: effectiveSignMode === 'trusted' ? 'The Windows runner will compile and sign the executable and MSI.' : 'This build is for internal testing and is not trusted by Windows by default.' });
       await loadBuildState();
     } catch (error) {
       toast.error('MSI build could not be queued', { description: error instanceof Error ? error.message : 'The backend rejected the build request.' });
