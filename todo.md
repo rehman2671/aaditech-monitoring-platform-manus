@@ -185,3 +185,4 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [ ] Configure the installed agent with a tenant-scoped enrollment token, restart the service, and verify endpoint plus real WMI metrics appear in the local database/dashboard.
 - [x] Add and validate a Command-Prompt-safe enrollment helper so operators can set the token without accidentally entering PowerShell commands into cmd.exe; PowerShell 5.1 help parsing passed without writing a token.
 - [x] Update the acceptance test that still expects the removed local tRPC MSI build mutation; it now asserts the documented `PRECONDITION_FAILED` contract.
+- [x] Add a `.cmd` wrapper that launches the enrollment PowerShell helper safely from Command Prompt with the local API default; wrapper text validation confirms RunAs elevation and helper wiring without executing or exposing a token.
