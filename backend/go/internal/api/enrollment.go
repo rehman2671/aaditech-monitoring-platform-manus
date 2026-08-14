@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +21,8 @@ type EnrollmentHandler struct {
 func NewEnrollmentHandler(db *sql.DB) *EnrollmentHandler {
 	return &EnrollmentHandler{db: db}
 }
+
+var enrollmentTokenPattern = regexp.MustCompile(`^sp-enrol-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
 func hashToken(raw string) string {
 	hash := sha256.Sum256([]byte(raw))
@@ -66,8 +70,19 @@ func (h *EnrollmentHandler) EnrollAgent(w http.ResponseWriter, r *http.Request) 
 		Hostname   string `json:"hostname"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Token == "" || req.EndpointID == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid enrollment request payload", http.StatusBadRequest)
+		return
+	}
+	req.Token = strings.TrimSpace(req.Token)
+	req.EndpointID = strings.TrimSpace(req.EndpointID)
+	req.Hostname = strings.TrimSpace(req.Hostname)
+	if req.Token == "" || req.EndpointID == "" {
+		http.Error(w, "Invalid enrollment request payload", http.StatusBadRequest)
+		return
+	}
+	if !enrollmentTokenPattern.MatchString(req.Token) {
+		http.Error(w, "Invalid enrollment token format", http.StatusUnauthorized)
 		return
 	}
 

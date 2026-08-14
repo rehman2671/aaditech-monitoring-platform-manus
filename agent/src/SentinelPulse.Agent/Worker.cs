@@ -35,14 +35,14 @@ namespace SentinelPulse.Agent
                 try
                 {
                     var metrics = _collectors.CollectMetrics();
-                    var endpointId = Environment.GetEnvironmentVariable("SENTINELPULSE_ENDPOINT_ID")
-                        ?? Environment.MachineName;
+					var endpointId = AgentConfiguration.Get("SENTINELPULSE_ENDPOINT_ID")
+						?? Environment.MachineName;
                     var hostname = Environment.MachineName;
                     var deviceToken = _buffer.LoadEncryptedCredential();
 
                     if (string.IsNullOrWhiteSpace(deviceToken))
                     {
-                        var enrollmentToken = Environment.GetEnvironmentVariable("SENTINELPULSE_ENROLLMENT_TOKEN");
+						var enrollmentToken = AgentConfiguration.Get("SENTINELPULSE_ENROLLMENT_TOKEN");
                         if (!string.IsNullOrWhiteSpace(enrollmentToken))
                         {
                             deviceToken = await _apiClient.EnrollAsync(
@@ -51,8 +51,9 @@ namespace SentinelPulse.Agent
                                 hostname);
                             if (!string.IsNullOrWhiteSpace(deviceToken))
                             {
-                                _buffer.SaveEncryptedCredential(deviceToken);
-                                _logger.LogInformation(
+								_buffer.SaveEncryptedCredential(deviceToken);
+								AgentConfiguration.ClearEnrollmentToken();
+								_logger.LogInformation(
                                     "SentinelPulse Agent enrolled endpoint {EndpointId}.",
                                     endpointId);
                             }

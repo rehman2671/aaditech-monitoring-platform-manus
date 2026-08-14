@@ -19,8 +19,11 @@ param(
     [string]$CertificateThumbprint = $env:SENTINELPULSE_SIGNING_CERT_THUMBPRINT,
     [string]$PfxPath = $env:SIGNING_CERT_PFX_PATH,
     [string]$PfxPassword = $env:SIGNING_CERT_PASSWORD,
-    [string]$SignToolPath = "",
-    [string]$TimestampUrl = "http://timestamp.digicert.com",
+	[string]$SignToolPath = "",
+	[string]$APIBaseUrl = "",
+	[string]$EndpointId = "",
+	[string]$EnrollmentToken = "",
+	[string]$TimestampUrl = "http://timestamp.digicert.com",
     [switch]$NoRestore
 )
 
@@ -181,6 +184,19 @@ function Sign-Binary {
     return $signature
 }
 
+if (-not [string]::IsNullOrWhiteSpace($EnrollmentToken)) {
+    if ($EnrollmentToken -notmatch '^sp-enrol-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
+        throw "EnrollmentToken must use the canonical sp-enrol-<UUID> format."
+    }
+    if ([string]::IsNullOrWhiteSpace($APIBaseUrl) -or [string]::IsNullOrWhiteSpace($EndpointId)) {
+        throw "APIBaseUrl and EndpointId are required when EnrollmentToken is provided."
+    }
+    $parsedApiBaseUrl = $null
+    if (-not [Uri]::TryCreate($APIBaseUrl.TrimEnd('/'), [UriKind]::Absolute, [ref]$parsedApiBaseUrl) -or $parsedApiBaseUrl.Scheme -notin @('http', 'https')) {
+        throw "APIBaseUrl must be an absolute http(s) URL."
+    }
+}
+
 if (-not (Test-Path $projectFile)) { throw "Agent project not found: $projectFile" }
 if (-not (Test-Path $wxsFile)) { throw "WiX source not found: $wxsFile" }
 if (-not (Test-Path $wixExe)) { throw "WiX v4 CLI not found at $wixExe. Install with: dotnet tool install --global wix --version 4.0.4" }
@@ -263,8 +279,11 @@ Write-Host "Building WiX v4 MSI with $($publishedFiles.Count) payload files..."
     -ext WixToolset.Util.wixext `
     -d "AgentVersion=$AgentVersion.0" `
     -d "AgentSemVer=$AgentSemVer" `
-    -d "PublishDir=$publishDir" `
-    $wxsFile `
+	-d "PublishDir=$publishDir" `
+	-d "BootstrapApiBaseUrl=$APIBaseUrl" `
+	-d "BootstrapEndpointId=$EndpointId" `
+	-d "BootstrapEnrollmentToken=$EnrollmentToken" `
+	$wxsFile `
     $payloadWxsFile `
     -o $msiFile
 if ($LASTEXITCODE -ne 0) { throw "WiX v4 build failed with exit code $LASTEXITCODE" }

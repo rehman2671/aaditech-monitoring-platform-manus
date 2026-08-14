@@ -192,3 +192,21 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Align the frontend token generation client (`App.tsx`) with the backend Go endpoint (`/api/v1/enrollment-tokens`) so generated tokens correctly return `sp-enrol-<UUID>` instead of client-side random strings.
 - [x] Correct example script token format in `EndpointsList.tsx` from old random string to `sp-enrol-00000000-0000-0000-0000-000000000000`.
 - [x] Validate backend enrollment token creation (`CreateToken`) issues `sp-enrol-<UUID>` strings matching the agent and helper expectations.
+
+## Windows Docker rebuild and live verification — 2026-08-15
+- [x] Inspect the actual Windows Docker Compose project, compose command, running containers, source mounts, and current service health; Docker Compose v5.3.1 and the `deployment` project were confirmed.
+- [x] Rebuild and force-recreate the Docker frontend and backend from the synchronized source; both containers are running, `/api/v1/auth/setup-status` returns 200, and the rebuilt frontend bundle contains the corrected `sp-enrol-` marker.
+- [ ] Test the live portal token generation format, authenticated MSI download, runner status, and agent enrollment/WMI telemetry only after the rebuild.
+
+## One-Time Automatic Agent Enrollment & Portal Token Fix — 2026-08-15
+- [ ] Align the backend enrollment token generator (`enrollment.go`) to issue standard UUID-formatted tokens (`sp-enrol-<UUID>`) matching database and helper expectations.
+- [ ] Embed automated enrollment bootstrap in the Windows MSI installer and service startup so agents register automatically upon installation without manual token prompts.
+- [ ] Rebuild Docker backend/frontend and compile MSI 2.4.4; verify one-time install and live telemetry end to end.
+
+## One-Time Automatic Enrollment — 2026-08-15
+- [ ] Normalize every enrollment token producer to `sp-enrol-<UUID>` and add regression coverage against compact hex tokens.
+- [ ] Extend the MSI build queue contract with tenant-scoped, single-use bootstrap settings without exposing plaintext credentials in admin build history.
+- [ ] Forward bootstrap settings through the Windows runner and WiX MSI, then clear the enrollment token after successful agent enrollment.
+- [ ] Replace the dashboard's separate copy-token/build workflow with a one-time automatic build form using API URL and endpoint identity.
+- [ ] Rebuild the Docker stack and compile a versioned v2.4.4 MSI on the connected Windows host.
+- [ ] Validate one-time installation, service enrollment, real WMI telemetry ingestion, tenant isolation, and signed artifact metadata.

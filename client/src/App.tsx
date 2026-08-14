@@ -313,7 +313,7 @@ export default function App() {
                   <Route path="/endpoints/:id"><EndpointDetail endpoints={shell.endpoints} onTriggerOnDemandRefresh={handleTriggerOnDemandRefresh} /></Route>
                   <Route path="/alerts"><AlertsCenter alertRules={shell.alertRules} systemAlerts={shell.systemAlerts} onToggleRule={handleToggleRule} onAcknowledgeAlert={handleAcknowledgeAlert} canWrite={shell.isAdmin} /></Route>
                   <Route path="/alert-rules" component={AlertRules} />
-                  <Route path="/tokens"><EnrollmentTokens tokens={shell.tokens} onCreateToken={handleCreateToken} canWrite={shell.isAdmin} /></Route>
+                  <Route path="/tokens"><EnrollmentTokens tokens={shell.tokens} onCreateToken={handleCreateToken} canWrite={shell.isAdmin} accessToken={session.accessToken} /></Route>
                   <Route path="/settings"><SettingsPage canWrite={shell.isAdmin} /></Route>
                   <Route component={NotFound} />
                 </Switch>

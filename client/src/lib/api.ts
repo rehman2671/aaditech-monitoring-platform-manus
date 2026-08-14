@@ -27,8 +27,9 @@ type BackendMSIBuilderStatus = {
 type BackendMSIBuildJob = {
   id: string;
   organization_id: string;
-  agent_version: string;
-  sign_mode: MSISignMode;
+	agent_version: string;
+	sign_mode: MSISignMode;
+	automatic_enrollment: boolean;
   status: MSIBuildJob['status'];
   error_message?: string;
   artifact_filename?: string;
@@ -63,8 +64,9 @@ function mapMSIBuildJob(value: BackendMSIBuildJob): MSIBuildJob {
   return {
     id: value.id,
     organizationId: value.organization_id,
-    agentVersion: value.agent_version,
-    signMode: value.sign_mode,
+		agentVersion: value.agent_version,
+		signMode: value.sign_mode,
+		automaticEnrollment: value.automatic_enrollment,
     status: value.status,
     errorMessage: value.error_message,
     artifactFilename: value.artifact_filename,
@@ -137,11 +139,21 @@ export const api = {
   exportEndpoints: (token: string) => request<Endpoint[]>('/export/endpoints', {}, token),
   msiBuilderStatus: async (token: string) => mapMSIBuilderStatus(await request<BackendMSIBuilderStatus>('/admin/msi-builder/status', {}, token)),
   listMSIBuilds: async (token: string) => (await request<BackendMSIBuildJob[]>('/admin/msi-builds', {}, token)).map(mapMSIBuildJob),
-  createMSIBuild: (token: string, agentVersion: string, signMode: MSISignMode) =>
-    request<{ job_id: string; status: string; message: string }>('/admin/msi-builds', {
-      method: 'POST',
-      body: JSON.stringify({ agent_version: agentVersion, sign_mode: signMode }),
-    }, token),
+  createMSIBuild: (
+    token: string,
+    agentVersion: string,
+    signMode: MSISignMode,
+    bootstrap?: { apiBaseUrl: string; endpointId: string; automaticEnrollment: boolean },
+  ) => request<{ job_id: string; status: string; message: string; automatic_enrollment?: boolean }>('/admin/msi-builds', {
+    method: 'POST',
+    body: JSON.stringify({
+      agent_version: agentVersion,
+      sign_mode: signMode,
+      api_base_url: bootstrap?.apiBaseUrl ?? '',
+      endpoint_id: bootstrap?.endpointId ?? '',
+      automatic_enrollment: bootstrap?.automaticEnrollment ?? false,
+    }),
+  }, token),
   downloadMSI: async (token: string, jobId: string) => {
     const response = await fetch(`${API_BASE_URL}/admin/msi-builds/${encodeURIComponent(jobId)}/download`, {
       headers: { Authorization: `Bearer ${token}` },

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -37,8 +38,11 @@ func NewMSIBuildHandler(db *sql.DB, artifactDir, builderKey string) *MSIBuildHan
 }
 
 type msiBuildRequest struct {
-	AgentVersion string `json:"agent_version"`
-	SignMode     string `json:"sign_mode"`
+	AgentVersion        string `json:"agent_version"`
+	SignMode            string `json:"sign_mode"`
+	APIBaseURL          string `json:"api_base_url"`
+	EndpointID          string `json:"endpoint_id"`
+	AutomaticEnrollment bool   `json:"automatic_enrollment"`
 }
 
 type msiBuildJob struct {
@@ -46,6 +50,7 @@ type msiBuildJob struct {
 	OrganizationID        string  `json:"organization_id"`
 	AgentVersion          string  `json:"agent_version"`
 	SignMode              string  `json:"sign_mode"`
+	AutomaticEnrollment   bool    `json:"automatic_enrollment"`
 	Status                string  `json:"status"`
 	ErrorMessage          *string `json:"error_message,omitempty"`
 	ArtifactFilename      *string `json:"artifact_filename,omitempty"`
@@ -60,6 +65,13 @@ type msiBuildJob struct {
 	CreatedAt             string  `json:"created_at"`
 	StartedAt             *string `json:"started_at,omitempty"`
 	CompletedAt           *string `json:"completed_at,omitempty"`
+}
+
+type msiBuildClaim struct {
+	msiBuildJob
+	BootstrapAPIBaseURL      string `json:"bootstrap_api_base_url,omitempty"`
+	BootstrapEndpointID      string `json:"bootstrap_endpoint_id,omitempty"`
+	BootstrapEnrollmentToken string `json:"bootstrap_enrollment_token,omitempty"`
 }
 
 type msiBuilderStatus struct {
@@ -177,22 +189,60 @@ func (h *MSIBuildHandler) createBuild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.AutomaticEnrollment {
+		if !validBootstrapURL(req.APIBaseURL) {
+			http.Error(w, "api_base_url must be an absolute http(s) URL", http.StatusBadRequest)
+			return
+		}
+		req.APIBaseURL = strings.TrimRight(strings.TrimSpace(req.APIBaseURL), "/")
+		if !validEndpointID(req.EndpointID) {
+			http.Error(w, "endpoint_id must be non-empty and contain no whitespace", http.StatusBadRequest)
+			return
+		}
+	}
+
 	claims := claimsFromRequest(r)
 	jobID := uuid.NewString()
-	_, err := h.db.ExecContext(r.Context(), `
-		INSERT INTO msi_build_jobs (id, tenant_id, requested_by, agent_version, sign_mode, status)
-		VALUES ($1, $2, $3, $4, $5, 'pending')`, jobID, claims.OrganizationID, claims.UserID, req.AgentVersion, req.SignMode)
+	tx, err := h.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		http.Error(w, "Failed to start MSI build transaction", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	var rawToken string
+	if req.AutomaticEnrollment {
+		rawToken = "sp-enrol-" + uuid.New().String()
+		expiresAt := time.Now().Add(24 * time.Hour)
+		if _, err = tx.ExecContext(r.Context(), `
+			INSERT INTO enrollment_tokens (token_hash, tenant_id, expires_at, created_at)
+			VALUES ($1, $2, $3, NOW())`, hashToken(rawToken), claims.OrganizationID, expiresAt); err != nil {
+			http.Error(w, "Failed to persist automatic enrollment token", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	_, err = tx.ExecContext(r.Context(), `
+		INSERT INTO msi_build_jobs (id, tenant_id, requested_by, agent_version, sign_mode, status,
+			automatic_enrollment, bootstrap_api_base_url, bootstrap_endpoint_id, bootstrap_enrollment_token)
+		VALUES ($1, $2, $3, $4, $5, 'pending', $6, NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''))`,
+		jobID, claims.OrganizationID, claims.UserID, req.AgentVersion, req.SignMode,
+		req.AutomaticEnrollment, req.APIBaseURL, req.EndpointID, rawToken)
 	if err != nil {
 		http.Error(w, "Failed to queue MSI build: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, http.StatusAccepted, map[string]any{"job_id": jobID, "status": "pending", "message": "Build queued for the Windows runner"})
+	if err = tx.Commit(); err != nil {
+		http.Error(w, "Failed to commit MSI build transaction", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]any{"job_id": jobID, "status": "pending", "automatic_enrollment": req.AutomaticEnrollment, "message": "Build queued for the Windows runner"})
 }
 
 func (h *MSIBuildHandler) listBuilds(w http.ResponseWriter, r *http.Request) {
 	claims := claimsFromRequest(r)
 	rows, err := h.db.QueryContext(r.Context(), `
-		SELECT id, tenant_id, agent_version, sign_mode, status, error_message, artifact_filename,
+		SELECT id, tenant_id, agent_version, sign_mode, automatic_enrollment, status, error_message, artifact_filename,
 		       checksum_filename, sha256, is_signed, certificate_subject, certificate_thumbprint,
 		       to_char(certificate_expires_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), certificate_trusted, size_bytes,
 		       to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
@@ -396,16 +446,20 @@ func (h *MSIBuildHandler) InternalNext(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 	var job msiBuildJob
+	var bootstrapAPIBaseURL, bootstrapEndpointID, bootstrapEnrollmentToken sql.NullString
 	var errMessage, artifact, checksum, sha, subject, thumbprint, expires, started, completed sql.NullString
 	err = tx.QueryRowContext(ctx, `
-		SELECT id, tenant_id, agent_version, sign_mode, status, error_message, artifact_filename,
+			SELECT id, tenant_id, agent_version, sign_mode, automatic_enrollment, status,
+			       bootstrap_api_base_url, bootstrap_endpoint_id, bootstrap_enrollment_token,
+			       error_message, artifact_filename,
 		       checksum_filename, sha256, is_signed, certificate_subject, certificate_thumbprint,
 		       to_char(certificate_expires_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), certificate_trusted, size_bytes,
 		       to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
 		       to_char(started_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
 		       to_char(completed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
 		FROM msi_build_jobs WHERE status = 'pending' ORDER BY created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1`).Scan(
-		&job.ID, &job.OrganizationID, &job.AgentVersion, &job.SignMode, &job.Status, &errMessage,
+		&job.ID, &job.OrganizationID, &job.AgentVersion, &job.SignMode, &job.AutomaticEnrollment, &job.Status,
+		&bootstrapAPIBaseURL, &bootstrapEndpointID, &bootstrapEnrollmentToken, &errMessage,
 		&artifact, &checksum, &sha, &job.IsSigned, &subject, &thumbprint, &expires, &job.CertificateTrusted,
 		&job.SizeBytes, &job.CreatedAt, &started, &completed)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -429,7 +483,13 @@ func (h *MSIBuildHandler) InternalNext(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to commit MSI build claim", http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"job": job})
+	claim := msiBuildClaim{
+		msiBuildJob:              job,
+		BootstrapAPIBaseURL:      nullStringValue(bootstrapAPIBaseURL),
+		BootstrapEndpointID:      nullStringValue(bootstrapEndpointID),
+		BootstrapEnrollmentToken: nullStringValue(bootstrapEnrollmentToken),
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"job": claim})
 }
 
 func (h *MSIBuildHandler) InternalStatus(w http.ResponseWriter, r *http.Request) {
@@ -452,8 +512,12 @@ func (h *MSIBuildHandler) InternalStatus(w http.ResponseWriter, r *http.Request)
 	_, err := h.db.ExecContext(r.Context(), `
 					UPDATE msi_build_jobs SET status = $2::varchar, error_message = $3, artifact_filename = $4,
 			 checksum_filename = $5, sha256 = $6, is_signed = $7, certificate_subject = $8,
-			 certificate_thumbprint = $9, certificate_expires_at = $10, certificate_trusted = $11,
-			 size_bytes = $12, completed_at = CASE WHEN $2::varchar IN ('succeeded', 'failed') THEN NOW() ELSE completed_at END
+				 certificate_thumbprint = $9, certificate_expires_at = $10, certificate_trusted = $11,
+				 size_bytes = $12,
+				 bootstrap_api_base_url = CASE WHEN $2::varchar IN ('succeeded', 'failed') THEN NULL ELSE bootstrap_api_base_url END,
+				 bootstrap_endpoint_id = CASE WHEN $2::varchar IN ('succeeded', 'failed') THEN NULL ELSE bootstrap_endpoint_id END,
+				 bootstrap_enrollment_token = CASE WHEN $2::varchar IN ('succeeded', 'failed') THEN NULL ELSE bootstrap_enrollment_token END,
+				 completed_at = CASE WHEN $2::varchar IN ('succeeded', 'failed') THEN NOW() ELSE completed_at END
 
 		WHERE id = $1`, req.JobID, req.Status, req.ErrorMessage, req.ArtifactFilename, req.ChecksumFilename,
 		req.SHA256, req.IsSigned, req.CertificateSubject, req.CertificateThumbprint, req.CertificateExpiresAt,
@@ -498,14 +562,14 @@ func (h *MSIBuildHandler) getBuild(r *http.Request, id, tenant string) (msiBuild
 	var job msiBuildJob
 	var errMessage, artifact, checksum, sha, subject, thumbprint, expires, started, completed sql.NullString
 	err := h.db.QueryRowContext(r.Context(), `
-		SELECT id, tenant_id, agent_version, sign_mode, status, error_message, artifact_filename,
+		SELECT id, tenant_id, agent_version, sign_mode, automatic_enrollment, status, error_message, artifact_filename,
 		       checksum_filename, sha256, is_signed, certificate_subject, certificate_thumbprint,
 		       to_char(certificate_expires_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), certificate_trusted, size_bytes,
 		       to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
 		       to_char(started_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
 		       to_char(completed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
 		FROM msi_build_jobs WHERE id = $1 AND tenant_id = $2`, id, tenant).Scan(
-		&job.ID, &job.OrganizationID, &job.AgentVersion, &job.SignMode, &job.Status, &errMessage,
+		&job.ID, &job.OrganizationID, &job.AgentVersion, &job.SignMode, &job.AutomaticEnrollment, &job.Status, &errMessage,
 		&artifact, &checksum, &sha, &job.IsSigned, &subject, &thumbprint, &expires, &job.CertificateTrusted,
 		&job.SizeBytes, &job.CreatedAt, &started, &completed)
 	if err != nil {
@@ -526,7 +590,7 @@ func (h *MSIBuildHandler) getBuild(r *http.Request, id, tenant string) (msiBuild
 func scanMSIBuild(scanner interface{ Scan(...any) error }) (msiBuildJob, error) {
 	var job msiBuildJob
 	var errMessage, artifact, checksum, sha, subject, thumbprint, expires, started, completed sql.NullString
-	err := scanner.Scan(&job.ID, &job.OrganizationID, &job.AgentVersion, &job.SignMode, &job.Status, &errMessage,
+	err := scanner.Scan(&job.ID, &job.OrganizationID, &job.AgentVersion, &job.SignMode, &job.AutomaticEnrollment, &job.Status, &errMessage,
 		&artifact, &checksum, &sha, &job.IsSigned, &subject, &thumbprint, &expires, &job.CertificateTrusted,
 		&job.SizeBytes, &job.CreatedAt, &started, &completed)
 	if err != nil {
@@ -557,6 +621,23 @@ func parseTime(value string) time.Time {
 		return time.Unix(0, 0)
 	}
 	return parsed
+}
+
+func validBootstrapURL(value string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(value))
+	return err == nil && parsed.Host != "" && parsed.User == nil && (parsed.Scheme == "http" || parsed.Scheme == "https")
+}
+
+func validEndpointID(value string) bool {
+	value = strings.TrimSpace(value)
+	return value != "" && len(value) <= 255 && !strings.ContainsAny(value, "\\t\\r\\n ")
+}
+
+func nullStringValue(value sql.NullString) string {
+	if !value.Valid {
+		return ""
+	}
+	return value.String
 }
 
 func builderUnavailableMessage(key string) string {

@@ -21,21 +21,24 @@ func ConnectDB(databaseUrl string) (*sql.DB, error) {
 }
 
 func RunMigrations(db *sql.DB) error {
-	migrationPath := filepath.Join("migrations", "001_initial_schema.sql")
-	if _, err := os.Stat(migrationPath); os.IsNotExist(err) {
-		// try fallback path if running from root or elsewhere
-		migrationPath = filepath.Join("backend", "go", "migrations", "001_initial_schema.sql")
+	migrationPaths := []string{
+		filepath.Join("migrations", "001_initial_schema.sql"),
+		filepath.Join("migrations", "002_msi_auto_enrollment.sql"),
+	}
+	for index := range migrationPaths {
+		if _, err := os.Stat(migrationPaths[index]); os.IsNotExist(err) {
+			migrationPaths[index] = filepath.Join("backend", "go", migrationPaths[index])
+		}
 	}
 
-	content, err := os.ReadFile(migrationPath)
-	if err != nil {
-		return fmt.Errorf("failed to read migration file %s: %w", migrationPath, err)
+	for _, migrationPath := range migrationPaths {
+		content, err := os.ReadFile(migrationPath)
+		if err != nil {
+			return fmt.Errorf("failed to read migration file %s: %w", migrationPath, err)
+		}
+		if _, err = db.Exec(string(content)); err != nil {
+			return fmt.Errorf("failed to execute migration %s: %w", migrationPath, err)
+		}
 	}
-
-	_, err = db.Exec(string(content))
-	if err != nil {
-		return fmt.Errorf("failed to execute migration: %w", err)
-	}
-
 	return nil
 }

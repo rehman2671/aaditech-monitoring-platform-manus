@@ -13,7 +13,7 @@ namespace SentinelPulse.Agent
 
         public ApiClient()
         {
-            var configuredBaseUrl = Environment.GetEnvironmentVariable("SENTINELPULSE_API_BASE_URL");
+			var configuredBaseUrl = AgentConfiguration.Get("SENTINELPULSE_API_BASE_URL");
             if (string.IsNullOrWhiteSpace(configuredBaseUrl) ||
                 !Uri.TryCreate(configuredBaseUrl.TrimEnd('/') + "/", UriKind.Absolute, out var baseUri) ||
                 (baseUri.Scheme != Uri.UriSchemeHttp && baseUri.Scheme != Uri.UriSchemeHttps))

@@ -202,8 +202,9 @@ export interface MSIBuilderStatus {
 export interface MSIBuildJob {
   id: string;
   organizationId: string;
-  agentVersion: string;
-  signMode: MSISignMode;
+	agentVersion: string;
+	signMode: MSISignMode;
+	automaticEnrollment: boolean;
   status: MSIBuildStatus;
   errorMessage?: string;
   artifactFilename?: string;

@@ -182,8 +182,18 @@ function Process-OneJob {
             AgentSemVer = $job.agent_version
             SignMode = $job.sign_mode
         }
-        if ($job.sign_mode -eq "trusted") {
-            if ($PfxPath) {
+		if ($job.automatic_enrollment) {
+			if ([string]::IsNullOrWhiteSpace($job.bootstrap_api_base_url) -or
+				[string]::IsNullOrWhiteSpace($job.bootstrap_endpoint_id) -or
+				[string]::IsNullOrWhiteSpace($job.bootstrap_enrollment_token)) {
+				throw "Automatic enrollment job is missing a complete bootstrap payload."
+			}
+			$arguments.APIBaseUrl = $job.bootstrap_api_base_url
+			$arguments.EndpointId = $job.bootstrap_endpoint_id
+			$arguments.EnrollmentToken = $job.bootstrap_enrollment_token
+		}
+		if ($job.sign_mode -eq "trusted") {
+			if ($PfxPath) {
                 $arguments.PfxPath = $PfxPath
                 $arguments.PfxPassword = $PfxPassword
             } elseif ([string]::IsNullOrWhiteSpace($CertificateThumbprint)) {

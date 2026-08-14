@@ -20,6 +20,15 @@
   <?ifndef PublishDir ?>
     <?define PublishDir = "..\publish" ?>
   <?endif ?>
+  <?ifndef BootstrapApiBaseUrl ?>
+    <?define BootstrapApiBaseUrl = "" ?>
+  <?endif ?>
+  <?ifndef BootstrapEndpointId ?>
+    <?define BootstrapEndpointId = "" ?>
+  <?endif ?>
+  <?ifndef BootstrapEnrollmentToken ?>
+    <?define BootstrapEnrollmentToken = "" ?>
+  <?endif ?>
 
   <Package
       Name="SentinelPulse Windows Agent"
@@ -106,6 +115,24 @@
           Name="InstallPath"
           Type="string"
           Value="[AGENTFOLDER]" />
+      <RegistryValue
+          Root="HKLM"
+          Key="Software\SentinelPulse\Agent"
+          Name="BootstrapApiBaseUrl"
+          Type="string"
+          Value="$(var.BootstrapApiBaseUrl)" />
+      <RegistryValue
+          Root="HKLM"
+          Key="Software\SentinelPulse\Agent"
+          Name="BootstrapEndpointId"
+          Type="string"
+          Value="$(var.BootstrapEndpointId)" />
+      <RegistryValue
+          Root="HKLM"
+          Key="Software\SentinelPulse\Agent"
+          Name="BootstrapEnrollmentToken"
+          Type="string"
+          Value="$(var.BootstrapEnrollmentToken)" />
     </Component>
   </Fragment>
 

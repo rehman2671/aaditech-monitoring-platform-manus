@@ -24,7 +24,9 @@ function formatDate(value?: string) {
 
 export default function EnrollmentTokens({ tokens, onCreateToken, canWrite, accessToken }: EnrollmentTokensProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [agentVersion, setAgentVersion] = useState('2.4.2');
+  const [agentVersion, setAgentVersion] = useState('2.4.4');
+  const [apiBaseUrl, setApiBaseUrl] = useState(() => window.localStorage.getItem('sentinelpulse.apiBaseUrl') ?? 'http://127.0.0.1:8080');
+  const [endpointId, setEndpointId] = useState(() => window.localStorage.getItem('sentinelpulse.endpointId') ?? '');
   const [signMode, setSignMode] = useState<MSISignMode>('trusted');
   const [builderStatus, setBuilderStatus] = useState<MSIBuilderStatus | null>(null);
   const [builds, setBuilds] = useState<MSIBuildJob[]>([]);
@@ -66,9 +68,25 @@ export default function EnrollmentTokens({ tokens, onCreateToken, canWrite, acce
       effectiveSignMode = 'self_signed_test';
       toast.info('Switching to self-signed test mode', { description: 'Trusted production signing requires a verified certificate. Automatically queuing a self-signed test build.' });
     }
+    const normalizedApiBaseUrl = apiBaseUrl.trim().replace(/\/+$/, '');
+    const normalizedEndpointId = endpointId.trim();
+    if (!/^https?:\/\/[^\s/]+(?:\/[^\s]*)?$/i.test(normalizedApiBaseUrl)) {
+      toast.error('Enter a valid local API base URL', { description: 'Example: http://127.0.0.1:8080 or http://10.73.99.58:8080' });
+      return;
+    }
+    if (!normalizedEndpointId || /\s/.test(normalizedEndpointId)) {
+      toast.error('Enter an endpoint name', { description: 'Use the Windows computer name or another stable identifier without spaces.' });
+      return;
+    }
+    window.localStorage.setItem('sentinelpulse.apiBaseUrl', normalizedApiBaseUrl);
+    window.localStorage.setItem('sentinelpulse.endpointId', normalizedEndpointId);
     setIsQueueingBuild(true);
     try {
-      await api.createMSIBuild(accessToken, agentVersion, effectiveSignMode);
+      await api.createMSIBuild(accessToken, agentVersion, effectiveSignMode, {
+        apiBaseUrl: normalizedApiBaseUrl,
+        endpointId: normalizedEndpointId,
+        automaticEnrollment: true,
+      });
       toast.success(`SentinelPulse Agent ${agentVersion} build queued`, { description: effectiveSignMode === 'trusted' ? 'The Windows runner will compile and sign the executable and MSI.' : 'This build is for internal testing and is not trusted by Windows by default.' });
       await loadBuildState();
     } catch (error) {
@@ -127,7 +145,7 @@ export default function EnrollmentTokens({ tokens, onCreateToken, canWrite, acce
             className="bg-blue-600 hover:bg-blue-500 text-white font-semibold gap-2 shadow-lg shadow-blue-900/20"
           >
             {isQueueingBuild ? <Loader2 className="w-4 h-4 animate-spin" /> : <Hammer className="w-4 h-4" />}
-            Build & Sign MSI
+            Build, Sign & Enroll
           </Button>
           <Button
             disabled={!canWrite || !accessToken}
@@ -165,8 +183,10 @@ export default function EnrollmentTokens({ tokens, onCreateToken, canWrite, acce
 
           {!builderStatus?.available && <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-4 text-xs text-slate-400"><p className="font-semibold text-slate-200">Manual builder key setup</p><p className="mt-1">Generate the platform-to-runner key once on the Windows host, store it in the ignored <code className="text-blue-300">deployment/.env</code>, restart the backend and runner, then refresh this page.</p><code className="mt-3 block rounded-lg bg-black/40 p-3 font-mono text-[11px] text-slate-300 whitespace-pre-wrap">powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\agent\\packaging\\generate-builder-key.ps1\n# then restart deployment backend and SentinelPulse MSI Builder</code></div>}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <label className="space-y-2 text-xs"><span className="font-semibold text-slate-300 block">Agent version</span><input value={agentVersion} onChange={event => setAgentVersion(event.target.value)} placeholder="2.4.2" className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 font-mono focus:outline-none focus:border-blue-500" /></label>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+            <label className="space-y-2 text-xs"><span className="font-semibold text-slate-300 block">Agent version</span><input value={agentVersion} onChange={event => setAgentVersion(event.target.value)} placeholder="2.4.4" className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 font-mono focus:outline-none focus:border-blue-500" /></label>
+            <label className="space-y-2 text-xs"><span className="font-semibold text-slate-300 block">Local Server API URL</span><input value={apiBaseUrl} onChange={event => setApiBaseUrl(event.target.value)} placeholder="http://127.0.0.1:8080" className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 font-mono focus:outline-none focus:border-blue-500" /></label>
+            <label className="space-y-2 text-xs"><span className="font-semibold text-slate-300 block">Endpoint name</span><input value={endpointId} onChange={event => setEndpointId(event.target.value)} placeholder="DESKTOP-1E02MC9" className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 font-mono focus:outline-none focus:border-blue-500" /></label>
             <label className="space-y-2 text-xs"><span className="font-semibold text-slate-300 block">Signing mode</span><select value={signMode} onChange={event => setSignMode(event.target.value as MSISignMode)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 font-mono focus:outline-none focus:border-blue-500"><option value="trusted">Trusted certificate (production)</option><option value="self_signed_test">Self-signed test certificate (untrusted)</option><option value="unsigned_test">Unsigned test MSI</option></select></label>
             <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-xs space-y-1"><p className="text-slate-400">Certificate status</p><p className={trustedReady ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}>{builderStatus?.certificateTrusted ? 'Trusted code-signing certificate ready' : 'No trusted certificate reported'}</p><p className="text-slate-500 truncate" title={builderStatus?.certificateSubject}>{builderStatus?.certificateSubject ?? builderStatus?.message ?? 'Waiting for runner heartbeat'}</p></div>
           </div>
