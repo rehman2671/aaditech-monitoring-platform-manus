@@ -173,6 +173,6 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Queue a test build in the dashboard, verify the runner picks it up, compiles, signs with self-signed test mode, and generates a downloadable artifact.
 
 ## Local Windows Deployment & Runner Repair — 2026-08-14
-- [ ] Inspect local Windows desktop state: verify `deployment/.env`, `MSI_BUILDER_KEY`, backend container logs, and runner script errors.
-- [ ] Start the local Windows runner in continuous polling mode (`run-msi-builder.ps1`) directly on the connected host.
-- [ ] Confirm the pending job transitions to `succeeded`, generates the signed MSI, and makes download/telemetry fully operational on `http://10.73.99.58:3001`.
+- [x] Inspect local Windows desktop state: verified `deployment/.env`, `MSI_BUILDER_KEY`, backend container logs, and runner script errors.
+- [x] Start the local Windows runner in continuous polling mode (`run-msi-builder.ps1`) directly on the connected host.
+- [x] Confirm the pending job transitions to `succeeded`, generates the signed MSI, and makes download/telemetry fully operational on `http://10.73.99.58:3001`.
