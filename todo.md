@@ -257,3 +257,10 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Inspect git status and commit history in mounted remote Windows workspace (`/mnt/desktop/Aaditech_Monitoring_Platform`).
 - [x] Compare backend/frontend configuration, environment variables, and Docker Compose files across both environments.
 - [x] Provide a transparent, accurate comparison summary explaining whether local and cloud configs are synchronized.
+
+## MSI Gap Audit & Root Cause Plan — 2026-08-15
+- [ ] Audit frontend build request parameters (`agent_version`, `sign_mode`, `api_base_url`, `endpoint_id`, `automatic_enrollment`) against backend `msiBuildRequest`.
+- [ ] Audit backend queueing table schema (`msi_build_jobs`) and tenant organization ID mapping during `createBuild`.
+- [ ] Audit Windows runner polling logic (`run-msi-builder.ps1`) for API authentication headers and header mismatch (`X-MSI-Builder-Key` vs `Authorization`).
+- [ ] Audit WiX v4 packaging prerequisites, .NET 8 SDK / MSBuild path resolution, and signing certificate provisioning on the Windows host.
+- [ ] Compile a definitive gap matrix with exact error points and required remediation steps.
