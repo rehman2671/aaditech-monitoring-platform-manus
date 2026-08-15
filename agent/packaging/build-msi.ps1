@@ -273,6 +273,16 @@ foreach ($file in $publishedFiles) {
 [void]$xml.AppendLine('</Wix>')
 $xml.ToString() | Set-Content -Path $payloadWxsFile -Encoding utf8
 
+Write-Host "Generating runtime config.json for flexible endpoint configuration..."
+$programDataConfigDir = Join-Path $Env:ProgramData "SentinelPulse\Agent"
+if (-not (Test-Path $programDataConfigDir)) { New-Item -ItemType Directory -Force $programDataConfigDir | Out-Null }
+$runtimeConfig = [ordered]@{
+    ApiBaseUrl = $APIBaseUrl
+    EndpointId = $EndpointId
+    EnrollmentToken = $EnrollmentToken
+}
+$runtimeConfig | ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $programDataConfigDir "config.json") -Encoding utf8
+
 Write-Host "Building WiX v4 MSI with $($publishedFiles.Count) payload files..."
 & $wixExe build `
     -arch x64 `
