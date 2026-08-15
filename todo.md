@@ -251,3 +251,9 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Verify database schema and columns for `msi_build_jobs` and `msi_builder_status`.
 - [x] Fix any route binding or runner signing/polling bugs and verify status endpoint returns 200 OK.
 - [x] Trigger a fresh v2.4.5 MSI build from the portal and verify successful queueing, runner claim, compilation, signing, and download availability.
+
+## Cloud vs Local Config Comparison Plan — 2026-08-15
+- [x] Inspect git status and commit history in sandbox workspace.
+- [x] Inspect git status and commit history in mounted remote Windows workspace (`/mnt/desktop/Aaditech_Monitoring_Platform`).
+- [x] Compare backend/frontend configuration, environment variables, and Docker Compose files across both environments.
+- [x] Provide a transparent, accurate comparison summary explaining whether local and cloud configs are synchronized.
