@@ -245,9 +245,9 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Save a final checkpoint upon successful validation.
 
 ## MSI Builder & Runner Diagnosis Plan — 2026-08-15
-- [ ] Inspect backend router implementation for `/api/v1/admin/msi-builds` and related builder status routes.
-- [ ] Check backend Docker container logs for incoming MSI builder status or queue requests yielding 404/500 errors.
-- [ ] Inspect Windows runner script (`run-msi-builder.ps1`) and signing logic for exit code 1 failures.
-- [ ] Verify database schema and columns for `msi_build_jobs` and `msi_builder_status`.
-- [ ] Fix any route binding or runner signing/polling bugs and verify status endpoint returns 200 OK.
-- [ ] Trigger a fresh v2.4.5 MSI build from the portal and verify successful queueing, runner claim, compilation, signing, and download availability.
+- [x] Inspect backend router implementation for `/api/v1/admin/msi-builds` and related builder status routes.
+- [x] Check backend Docker container logs for incoming MSI builder status or queue requests yielding 404/500 errors.
+- [x] Inspect Windows runner script (`run-msi-builder.ps1`) and signing logic for exit code 1 failures.
+- [x] Verify database schema and columns for `msi_build_jobs` and `msi_builder_status`.
+- [x] Fix any route binding or runner signing/polling bugs and verify status endpoint returns 200 OK.
+- [x] Trigger a fresh v2.4.5 MSI build from the portal and verify successful queueing, runner claim, compilation, signing, and download availability.
