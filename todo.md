@@ -215,3 +215,9 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Diagnose msi_build_jobs table insertion failure and runner polling loop
 - [x] Ensure versioned MSI artifacts match exact build job versions and DownloadLatest serves newest job artifact
 - [x] Rebuild Docker backend container and verify build queueing and completion end-to-end
+
+## Secure Diagnostic Audit Trail
+- [x] Create database migration for tenant-isolated diagnostic audit events table
+- [x] Implement backend API endpoints and Go logging middleware for recording structured steps
+- [x] Add agent and runner diagnostic reporting for build, installation, enrollment, and telemetry push
+- [x] Build a dedicated Diagnostics & Audit Trail tab in the React dashboard with live filtering

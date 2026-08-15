@@ -13,6 +13,7 @@ import EndpointsList from './pages/EndpointsList';
 import EndpointDetail from './pages/EndpointDetail';
 import AlertsCenter from './pages/AlertsCenter';
 import EnrollmentTokens from './pages/EnrollmentTokens';
+import DiagnosticEventsPage from './pages/DiagnosticEventsPage';
 import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
 import SetupPage from './pages/SetupPage';
@@ -314,6 +315,7 @@ export default function App() {
                   <Route path="/alerts"><AlertsCenter alertRules={shell.alertRules} systemAlerts={shell.systemAlerts} onToggleRule={handleToggleRule} onAcknowledgeAlert={handleAcknowledgeAlert} canWrite={shell.isAdmin} /></Route>
                   <Route path="/alert-rules" component={AlertRules} />
                   <Route path="/tokens"><EnrollmentTokens tokens={shell.tokens} onCreateToken={handleCreateToken} canWrite={shell.isAdmin} accessToken={session.accessToken} /></Route>
+                  <Route path="/diagnostics"><DiagnosticEventsPage accessToken={session.accessToken} canWrite={shell.isAdmin} /></Route>
                   <Route path="/settings"><SettingsPage canWrite={shell.isAdmin} /></Route>
                   <Route component={NotFound} />
                 </Switch>

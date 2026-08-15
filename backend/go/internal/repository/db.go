@@ -21,10 +21,11 @@ func ConnectDB(databaseUrl string) (*sql.DB, error) {
 }
 
 func RunMigrations(db *sql.DB) error {
-	migrationPaths := []string{
-		filepath.Join("migrations", "001_initial_schema.sql"),
-		filepath.Join("migrations", "002_msi_auto_enrollment.sql"),
-	}
+		migrationPaths := []string{
+			filepath.Join("migrations", "001_initial_schema.sql"),
+			filepath.Join("migrations", "002_msi_auto_enrollment.sql"),
+			filepath.Join("migrations", "003_diagnostic_events.sql"),
+		}
 	for index := range migrationPaths {
 		if _, err := os.Stat(migrationPaths[index]); os.IsNotExist(err) {
 			migrationPaths[index] = filepath.Join("backend", "go", migrationPaths[index])

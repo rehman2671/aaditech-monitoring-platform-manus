@@ -27,6 +27,7 @@ export default function Sidebar({ endpointsCount, criticalAlertsCount, userRole,
     { href: '/endpoints', label: 'Endpoints Fleet', icon: Server, badge: endpointsCount },
     { href: '/alerts', label: 'Alerts & Rules', icon: AlertTriangle, alertBadge: criticalAlertsCount },
     { href: '/tokens', label: 'Enrollment Tokens', icon: KeyRound },
+    { href: '/diagnostics', label: 'Diagnostic Logs', icon: Terminal },
     { href: '/settings', label: 'Platform Settings', icon: Settings },
   ];
 

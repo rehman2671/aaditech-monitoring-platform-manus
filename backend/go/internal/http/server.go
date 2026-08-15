@@ -110,8 +110,12 @@ func (s *Server) RegisterRoutes() http.Handler {
 		alertHandler.TestWebhook(w, r, claims)
 	})))
 
-	// Admin Retention Purge Route (Admin RBAC required)
-	mux.Handle("/api/v1/admin/retention/purge", s.requireAuth(http.HandlerFunc(api.HandleAdminRetentionPurge(s.db))))
+		// Admin Retention Purge Route (Admin RBAC required)
+		mux.Handle("/api/v1/admin/retention/purge", s.requireAuth(http.HandlerFunc(api.HandleAdminRetentionPurge(s.db))))
+
+		// Admin Diagnostics Audit Trail
+		diagHandler := api.NewDiagnosticHandler(s.db)
+		mux.Handle("/api/v1/admin/diagnostics", s.requireAuth(http.HandlerFunc(diagHandler.ListEvents)))
 
 	// Windows MSI builder and signed artifact workflow.
 	msiBuilder := api.NewMSIBuildHandler(s.db, s.cfg.MSIArtifactDir, s.cfg.MSIBuilderKey)
