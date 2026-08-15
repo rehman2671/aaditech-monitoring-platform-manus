@@ -271,3 +271,10 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Inspect agent C# source (`AgentConfiguration.cs` or `Program.cs`) to check where config JSON or registry settings are read at startup.
 - [x] Fix any gap where generated JSON configuration files lack bootstrap or endpoint metadata after compilation.
 - [x] Rebuild and verify that a newly generated MSI correctly writes the runtime JSON config with all required endpoint information.
+
+## Zero-Manual Flexible End-to-End Pipeline Plan — 2026-08-15
+- [ ] Map complete pipeline architecture (Portal -> Backend DB Queue -> Windows Runner -> WiX Compilation & JSON Config generation -> MSI installation & Service bootstrap -> Enrollment & Telemetry).
+- [ ] Refactor agent configuration hierarchy to support dynamic runtime config (`appsettings.json` in `ProgramData\SentinelPulse\Agent\config.json`) alongside registry fallbacks, enabling flexible server IP/base URL changes without MSI rebuilds.
+- [ ] Update `build-msi.ps1` and `sentinelpulse-agent.wxs` to dynamically generate a complete JSON configuration file during MSI packaging containing `ApiBaseUrl`, `EndpointId`, `OrganizationId`, and `EnrollmentToken`.
+- [ ] Update C# agent `AgentConfiguration.cs` and `Worker.cs` to prioritize the JSON config file over static registry values, supporting runtime reconfiguration.
+- [ ] Verify zero-manual build, install, enrollment, and telemetry with flexible IP/path changes.
