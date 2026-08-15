@@ -259,8 +259,8 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Provide a transparent, accurate comparison summary explaining whether local and cloud configs are synchronized.
 
 ## MSI Gap Audit & Root Cause Plan — 2026-08-15
-- [ ] Audit frontend build request parameters (`agent_version`, `sign_mode`, `api_base_url`, `endpoint_id`, `automatic_enrollment`) against backend `msiBuildRequest`.
-- [ ] Audit backend queueing table schema (`msi_build_jobs`) and tenant organization ID mapping during `createBuild`.
-- [ ] Audit Windows runner polling logic (`run-msi-builder.ps1`) for API authentication headers and header mismatch (`X-MSI-Builder-Key` vs `Authorization`).
-- [ ] Audit WiX v4 packaging prerequisites, .NET 8 SDK / MSBuild path resolution, and signing certificate provisioning on the Windows host.
-- [ ] Compile a definitive gap matrix with exact error points and required remediation steps.
+- [x] Audit frontend build request parameters (`agent_version`, `sign_mode`, `api_base_url`, `endpoint_id`, `automatic_enrollment`) against backend `msiBuildRequest`.
+- [x] Audit backend queueing table schema (`msi_build_jobs`) and tenant organization ID mapping during `createBuild`.
+- [x] Audit Windows runner polling logic (`run-msi-builder.ps1`) for API authentication headers and header mismatch (`X-MSI-Builder-Key` vs `Authorization`).
+- [x] Audit WiX v4 packaging prerequisites, .NET 8 SDK / MSBuild path resolution, and signing certificate provisioning on the Windows host.
+- [x] Compile a definitive gap matrix with exact error points and required remediation steps.
