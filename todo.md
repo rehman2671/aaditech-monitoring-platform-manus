@@ -278,3 +278,8 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Update `build-msi.ps1` and `sentinelpulse-agent.wxs` to dynamically generate a complete JSON configuration file during MSI packaging containing `ApiBaseUrl`, `EndpointId`, `OrganizationId`, and `EnrollmentToken`.
 - [x] Update C# agent `AgentConfiguration.cs` and `Worker.cs` to prioritize the JSON config file over static registry values, supporting runtime reconfiguration.
 - [x] Verify zero-manual build, install, enrollment, and telemetry with flexible IP/path changes.
+
+## Approved old MSI cleanup — 2026-08-15
+- [x] Read the supplied 2.4.1 installation log and identify the exact old MSI path and signing state.
+- [x] Inventory SentinelPulse MSI files only in the approved local artifact, publish, and Downloads folders.
+- [x] Delete the approved old SentinelPulse MSI files and verify no matching artifacts remain.
