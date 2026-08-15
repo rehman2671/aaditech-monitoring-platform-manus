@@ -264,3 +264,10 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Audit Windows runner polling logic (`run-msi-builder.ps1`) for API authentication headers and header mismatch (`X-MSI-Builder-Key` vs `Authorization`).
 - [x] Audit WiX v4 packaging prerequisites, .NET 8 SDK / MSBuild path resolution, and signing certificate provisioning on the Windows host.
 - [x] Compile a definitive gap matrix with exact error points and required remediation steps.
+
+## Post-Compile JSON Configuration Propagation Plan — 2026-08-15
+- [ ] Inspect WiX source file (`sentinelpulse-agent.wxs`) for config file generation and custom actions or registry property mappings.
+- [ ] Inspect `build-msi.ps1` to see how bootstrap API base URL, endpoint ID, and enrollment token are written into the compiled MSI or post-install config JSON.
+- [ ] Inspect agent C# source (`AgentConfiguration.cs` or `Program.cs`) to check where config JSON or registry settings are read at startup.
+- [ ] Fix any gap where generated JSON configuration files lack bootstrap or endpoint metadata after compilation.
+- [ ] Rebuild and verify that a newly generated MSI correctly writes the runtime JSON config with all required endpoint information.
