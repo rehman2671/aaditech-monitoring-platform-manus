@@ -221,3 +221,25 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Implement backend API endpoints and Go logging middleware for recording structured steps
 - [x] Add agent and runner diagnostic reporting for build, installation, enrollment, and telemetry push
 - [x] Build a dedicated Diagnostics & Audit Trail tab in the React dashboard with live filtering
+
+## Same-laptop endpoint telemetry diagnosis — 2026-08-15
+- [ ] Read-only inspect the connected Windows laptop's SentinelPulse service state, service command line, registry/environment configuration, and agent logs.
+- [ ] Read-only inspect the connected laptop's Docker Compose containers, backend/frontend health, backend logs, enrollment responses, and telemetry database rows.
+- [ ] Correlate endpoint and backend evidence to identify the exact enrollment, network binding, authentication, or ingestion failure.
+- [ ] Apply only explicitly approved code/configuration/runtime fixes, then rebuild/restart only the affected local components.
+- [ ] Validate same-laptop enrollment and real WMI telemetry end to end, including dashboard visibility and diagnostic audit events.
+- [ ] Document the root cause, evidence, commands, validation results, and rollback point.
+
+## Historical diagnostic items retained from previous sessions
+- [x] Prior telemetry validation was recorded as complete, but the current same-laptop report requires fresh read-only evidence rather than relying on the prior checkpoint.
+- [x] No destructive database operation is authorized as part of this diagnostic pass.
+
+## Same-Laptop Telemetry Fix & Validation Plan — 2026-08-15
+- [ ] Save a pre-fix checkpoint as the rollback reference.
+- [ ] Verify Docker container health (`sentinelpulse_backend`, `sentinelpulse_db`, `sentinelpulse_redis`, `sentinelpulse_frontend`).
+- [ ] Issue a valid tenant-scoped enrollment token via the backend database / API helper or portal token generator.
+- [ ] Apply the valid canonical `sp-enrol-<UUID>` token to the local Windows agent environment and registry using `configure-agent-enrollment.ps1`.
+- [ ] Restart the `SentinelPulseAgent` Windows service and verify successful enrollment, credential persistence via DPAPI, and token cleanup.
+- [ ] Query TimescaleDB `endpoints`, `endpoint_credentials`, and `endpoint_metrics_hyper` to confirm real WMI telemetry ingestion.
+- [ ] Verify live dashboard visibility for `DESKTOP-1E02MC9` and diagnostic audit log recording.
+- [ ] Save a final checkpoint upon successful validation.
