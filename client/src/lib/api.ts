@@ -110,8 +110,21 @@ async function request<T>(path: string, init: RequestInit = {}, accessToken?: st
   });
 
   if (!response.ok) {
-    const payload = await response.json().catch(() => ({ error: { code: 'UNKNOWN_ERROR', message: 'Request failed' } }));
-    throw new ApiError(response.status, payload as StandardErrorEnvelope);
+    const rawBody = await response.text();
+    let payload: StandardErrorEnvelope;
+    try {
+      payload = rawBody ? JSON.parse(rawBody) as StandardErrorEnvelope : {
+        error: { code: 'UNKNOWN_ERROR', message: response.statusText || 'Request failed' },
+      };
+    } catch {
+      payload = {
+        error: {
+          code: `HTTP_${response.status}`,
+          message: rawBody.trim() || response.statusText || 'Request failed',
+        },
+      };
+    }
+    throw new ApiError(response.status, payload);
   }
 
   if (response.status === 204) return undefined as T;

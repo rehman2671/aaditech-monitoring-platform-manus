@@ -72,21 +72,6 @@ export default function App() {
   }, [setupComplete]);
 
   useEffect(() => {
-    if (!auth.user) return;
-    const nextSession: AuthSession = {
-      accessToken: 'oauth-session',
-      expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
-      user: {
-        id: String(auth.user.id),
-        email: auth.user.email ?? 'operator@enterprise.local',
-        role: auth.user.role === 'admin' ? 'admin' : 'viewer',
-        organizationId: String((auth.user as unknown as { organizationId?: string }).organizationId ?? auth.user.id),
-      },
-    };
-    setSession(nextSession);
-  }, [auth.user]);
-
-  useEffect(() => {
     if (!endpointQuery.data) return;
     setEndpoints(prev => endpointQuery.data.map(record => {
       const fallback = prev.find(endpoint => endpoint.id === record.id);

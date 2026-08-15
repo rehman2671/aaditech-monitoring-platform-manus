@@ -283,3 +283,20 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Read the supplied 2.4.1 installation log and identify the exact old MSI path and signing state.
 - [x] Inventory SentinelPulse MSI files only in the approved local artifact, publish, and Downloads folders.
 - [x] Delete the approved old SentinelPulse MSI files and verify no matching artifacts remain.
+
+## Fresh MSI 2.4.5 Build & Validation — 2026-08-15
+- [ ] Verify local backend health, MSI builder status, Windows runner heartbeat, queue state, and empty artifact folders.
+- [ ] Queue a fresh version 2.4.5 build with automatic enrollment metadata and the configured server base URL.
+- [ ] Verify the Windows runner claims and completes the job with compilation, signing, manifest, and runtime config generation.
+- [ ] Verify the new MSI, checksum/manifest, generated `config.json`, and portal download path are all version 2.4.5.
+- [ ] Report only evidence-backed build status and the exact next installation action.
+
+## MSI Builder Status API Failure — 2026-08-15
+- [ ] Capture the exact local portal MSI builder status request URL, response status, and response body.
+- [ ] Compare the frontend request contract with the backend status route, proxy configuration, auth headers, and tenant context.
+- [ ] Verify the live builder heartbeat row is accepted by the backend and does not cause the status endpoint to fail.
+- [ ] Apply the minimum targeted fix for the status request failure and align the UI signing mode with the available runner.
+- [ ] Verify the portal shows builder status, queues version 2.4.5, and reports fresh build progress.
+- [x] Replace the App.tsx placeholder `oauth-session` access token with a real local Go API session; prevent Manus/OAuth identity from masquerading as a valid REST bearer token.
+- [x] Improve REST API error parsing so text/plain 401/403 responses show the real backend reason instead of generic `Request failed`.
+- [ ] Rebuild the local frontend container and verify the MSI status route receives a valid bearer token and returns 200.
