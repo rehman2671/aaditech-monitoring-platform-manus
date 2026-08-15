@@ -210,3 +210,8 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Replace the dashboard's separate copy-token/build workflow with a one-time automatic build form using API URL and endpoint identity.
 - [x] Rebuild the Docker stack and compile a versioned v2.4.4 MSI on the connected Windows host.
 - [x] Validate one-time installation, service enrollment, real WMI telemetry ingestion, tenant isolation, and signed artifact metadata.
+
+## MSI Build Queue & Version Fixes
+- [x] Diagnose msi_build_jobs table insertion failure and runner polling loop
+- [x] Ensure versioned MSI artifacts match exact build job versions and DownloadLatest serves newest job artifact
+- [x] Rebuild Docker backend container and verify build queueing and completion end-to-end
