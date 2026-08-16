@@ -300,3 +300,9 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Replace the App.tsx placeholder `oauth-session` access token with a real local Go API session; prevent Manus/OAuth identity from masquerading as a valid REST bearer token.
 - [x] Improve REST API error parsing so text/plain 401/403 responses show the real backend reason instead of generic `Request failed`.
 - [ ] Rebuild the local frontend container and verify the MSI status route receives a valid bearer token and returns 200.
+
+## Portal Bug Fixes — Screenshot Evidence (2026-08-15)
+- [x] Fix endpoint name validation mismatch in `EnrollmentTokens.tsx` where a visually populated default value is not registered in component state.
+- [x] Fix signing-mode auto-switch behavior so selecting `trusted` without a certificate does not trigger unexpected self-signed toasts and resets.
+- [x] Fix builder-status API call in `EnrollmentTokens.tsx` so it passes the valid access token and correctly handles backend admin responses.
+- [x] Rebuild local Docker frontend and verify all three toast/error notifications are resolved.

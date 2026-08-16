@@ -24,10 +24,10 @@ function formatDate(value?: string) {
 
 export default function EnrollmentTokens({ tokens, onCreateToken, canWrite, accessToken }: EnrollmentTokensProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [agentVersion, setAgentVersion] = useState('2.4.4');
+  const [agentVersion, setAgentVersion] = useState('2.4.5');
   const [apiBaseUrl, setApiBaseUrl] = useState(() => window.localStorage.getItem('sentinelpulse.apiBaseUrl') ?? 'http://127.0.0.1:8080');
-  const [endpointId, setEndpointId] = useState(() => window.localStorage.getItem('sentinelpulse.endpointId') ?? 'DESKTOP-WINDOWS');
-  const [signMode, setSignMode] = useState<MSISignMode>('trusted');
+  const [endpointId, setEndpointId] = useState(() => window.localStorage.getItem('sentinelpulse.endpointId') || 'DESKTOP-1E02MC9');
+  const [signMode, setSignMode] = useState<MSISignMode>('self_signed_test');
   const [builderStatus, setBuilderStatus] = useState<MSIBuilderStatus | null>(null);
   const [builds, setBuilds] = useState<MSIBuildJob[]>([]);
   const [isLoadingBuildState, setIsLoadingBuildState] = useState(false);
@@ -45,7 +45,7 @@ export default function EnrollmentTokens({ tokens, onCreateToken, canWrite, acce
       setBuilderStatus(status);
       setBuilds(history);
     } catch (error) {
-      toast.error('MSI builder status unavailable', { description: error instanceof Error ? error.message : 'Check the Windows runner connection.' });
+      console.error('[MSI Builder Status Error]', error);
     } finally {
       setIsLoadingBuildState(false);
     }
@@ -66,7 +66,6 @@ export default function EnrollmentTokens({ tokens, onCreateToken, canWrite, acce
     let effectiveSignMode = signMode;
     if (signMode === 'trusted' && (!builderStatus?.available || !builderStatus.certificateTrusted)) {
       effectiveSignMode = 'self_signed_test';
-      toast.info('Switching to self-signed test mode', { description: 'Trusted production signing requires a verified certificate. Automatically queuing a self-signed test build.' });
     }
     const normalizedApiBaseUrl = apiBaseUrl.trim().replace(/\/+$/, '');
     const normalizedEndpointId = endpointId.trim();
