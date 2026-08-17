@@ -306,3 +306,8 @@ The confirmed model is that `deployment` is the Docker Compose project name, not
 - [x] Fix signing-mode auto-switch behavior so selecting `trusted` without a certificate does not trigger unexpected self-signed toasts and resets.
 - [x] Fix builder-status API call in `EnrollmentTokens.tsx` so it passes the valid access token and correctly handles backend admin responses.
 - [x] Rebuild local Docker frontend and verify all three toast/error notifications are resolved.
+
+## Deep Architecture Review & Out-of-the-Box Audit (2026-08-16)
+- [x] Conduct deep research and root-cause audit of why the MSI pipeline encountered multi-day friction.
+- [x] Document structural flaws in asynchronous remote MSI building vs. universal installer patterns in `sentinelpulse_deep_architecture_review.md`.
+- [x] Formulate corrected target architecture and no-manual-work phased implementation roadmap.
