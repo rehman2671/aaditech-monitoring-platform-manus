@@ -20,3 +20,7 @@
 - [ ] Compile version 2.4.5 MSI installer through portal/runner.
 - [ ] Install MSI on local Windows endpoint, verify zero-prompt automatic enrollment and device credential persistence via DPAPI.
 - [ ] Confirm real WMI telemetry appears in the PostgreSQL/TimescaleDB tables and React dashboard overview.
+
+- [x] Complete evidence-based end-to-end audit and save the consolidated gap report in SENTINELPULSE_COMPLETE_AUDIT.md.
+
+- [ ] Reconcile the local portal showing 0 endpoints with backend/database evidence showing DESKTOP-1E02MC9 and fresh telemetry; verify the exact API response, tenant filter, and frontend mapping before claiming UI success.
