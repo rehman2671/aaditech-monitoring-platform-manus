@@ -24,3 +24,11 @@
 - [x] Complete evidence-based end-to-end audit and save the consolidated gap report in SENTINELPULSE_COMPLETE_AUDIT.md.
 
 - [ ] Reconcile the local portal showing 0 endpoints with backend/database evidence showing DESKTOP-1E02MC9 and fresh telemetry; verify the exact API response, tenant filter, and frontend mapping before claiming UI success.
+
+## New private GitHub repository publication — 2026-08-25
+
+- [ ] Inspect current Git remotes, branch, working tree, and untracked files before repository creation.
+- [ ] Verify secrets, certificates, tokens, local environment files, logs, build artifacts, and generated files are excluded from the new repository.
+- [ ] Create a new private GitHub repository for the SentinelPulse project.
+- [ ] Commit the safe project state on the main branch.
+- [ ] Push main to the new private repository and verify the remote tree and commit.

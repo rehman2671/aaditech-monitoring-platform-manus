@@ -112,3 +112,21 @@ temp/
 # Manus version file (auto-generated, not part of source)
 client/public/__manus__/version.json
 .project-config.json
+
+# Local Windows agent/build artifacts and signing material
+backend/go/backend
+backend/go/sentinelpulse-backend
+**/bin/
+**/obj/
+*.msi
+*.exe
+*.dll
+*.pdb
+*.pfx
+*.p12
+*.pem
+*.key
+
+# Generated/internal presentation and debug artifacts
+slides_msi_deployment/slide_state.json
+client/public/__manus__/debug-collector.js
