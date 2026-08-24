@@ -27,8 +27,8 @@
 
 ## New private GitHub repository publication — 2026-08-25
 
-- [ ] Inspect current Git remotes, branch, working tree, and untracked files before repository creation.
-- [ ] Verify secrets, certificates, tokens, local environment files, logs, build artifacts, and generated files are excluded from the new repository.
-- [ ] Create a new private GitHub repository for the SentinelPulse project.
-- [ ] Commit the safe project state on the main branch.
-- [ ] Push main to the new private repository and verify the remote tree and commit.
+- [x] Inspect current Git remotes, branch, working tree, and untracked files before repository creation.
+- [x] Verify secrets, certificates, tokens, local environment files, logs, build artifacts, and generated files are excluded from the new repository.
+- [x] Create a new private GitHub repository for the SentinelPulse project.
+- [x] Commit the safe project state on the main branch.
+- [x] Push main to the new private repository and verify the remote tree and commit.
