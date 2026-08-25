@@ -65,3 +65,7 @@
 - [x] Re-run pnpm test and verify the preflight healthy, unhealthy, and misconfigured scenarios pass.
 
 - [x] Remove mock-admin-token fallback from Platform Settings and use the authenticated session credential or fail closed.
+
+- [x] Add frontend API tests proving null or object endpoint responses fail with a descriptive payload error instead of crashing on map.
+
+- [x] Assert the descriptive INVALID_API_PAYLOAD error message text for both null and object endpoint responses.

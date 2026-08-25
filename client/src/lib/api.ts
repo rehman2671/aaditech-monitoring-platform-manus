@@ -131,6 +131,16 @@ async function request<T>(path: string, init: RequestInit = {}, accessToken?: st
   return response.json() as Promise<T>;
 }
 
+function requireArray<T>(value: unknown, path: string): T[] {
+  if (Array.isArray(value)) return value as T[];
+  throw new ApiError(502, {
+    error: {
+      code: 'INVALID_API_PAYLOAD',
+      message: `Expected an array response from ${path}; received ${value === null ? 'null' : typeof value}.`,
+    },
+  });
+}
+
 export const api = {
   login: (email: string, password: string) =>
     request<AuthSession>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
@@ -143,15 +153,15 @@ export const api = {
     }, accessToken),
   refresh: () => request<AuthSession>('/auth/refresh', { method: 'POST' }),
   summary: (token: string) => request<DashboardSummary>('/dashboard/summary', {}, token),
-  endpoints: (token: string, query = '') => request<Endpoint[]>(`/endpoints${query}`, {}, token),
+  endpoints: async (token: string, query = '') => requireArray<Endpoint>(await request<unknown>(`/endpoints${query}`, {}, token), `/endpoints${query}`),
   endpoint: (token: string, id: string) => request<Endpoint>(`/endpoints/${id}`, {}, token),
   requestRefresh: (token: string, id: string, modules: string[]) =>
     request<{ requestId: string }>(`/endpoints/${id}/refresh`, { method: 'POST', body: JSON.stringify({ modules }) }, token),
   ingest: (token: string, payload: ApiRequestEnvelope) =>
     request<{ received: boolean }>('/ingest', { method: 'POST', body: JSON.stringify(payload) }, token),
-  exportEndpoints: (token: string) => request<Endpoint[]>('/export/endpoints', {}, token),
+  exportEndpoints: async (token: string) => requireArray<Endpoint>(await request<unknown>('/export/endpoints', {}, token), '/export/endpoints'),
   msiBuilderStatus: async (token: string) => mapMSIBuilderStatus(await request<BackendMSIBuilderStatus>('/admin/msi-builder/status', {}, token)),
-  listMSIBuilds: async (token: string) => (await request<BackendMSIBuildJob[]>('/admin/msi-builds', {}, token)).map(mapMSIBuildJob),
+  listMSIBuilds: async (token: string) => requireArray<BackendMSIBuildJob>(await request<unknown>('/admin/msi-builds', {}, token), '/admin/msi-builds').map(mapMSIBuildJob),
   createMSIBuild: (
     token: string,
     agentVersion: string,

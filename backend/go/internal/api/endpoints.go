@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/sentinelpulse/backend/internal/auth"
 )
@@ -35,28 +36,39 @@ func (h *EndpointHandler) ListEndpoints(w http.ResponseWriter, r *http.Request, 
 	defer rows.Close()
 
 	type Endpoint struct {
-		ID        string    `json:"id"`
-		Hostname  string    `json:"hostname"`
-		IPAddress string    `json:"ip_address"`
-		OSVersion string    `json:"os_version"`
-		Status    string    `json:"status"`
-		LastSeen  *string   `json:"last_seen"`
-		CreatedAt string    `json:"created_at"`
+		ID        string  `json:"id"`
+		Hostname  string  `json:"hostname"`
+		IPAddress string  `json:"ip_address"`
+		OSVersion string  `json:"os_version"`
+		Status    string  `json:"status"`
+		LastSeen  *string `json:"last_seen"`
+		CreatedAt string  `json:"created_at"`
 	}
 
 	var endpoints []Endpoint
 	for rows.Next() {
 		var e Endpoint
-		var lastSeen sql.NullTime
-		if err := rows.Scan(&e.ID, &e.Hostname, &e.IPAddress, &e.OSVersion, &e.Status, &lastSeen, &e.CreatedAt); err == nil {
-			if lastSeen.Valid {
-				ls := lastSeen.Time.Format("2006-01-02T15:04:05Z07:00")
-				e.LastSeen = &ls
-			}
-			endpoints = append(endpoints, e)
+		var lastSeen, createdAt sql.NullTime
+		if err := rows.Scan(&e.ID, &e.Hostname, &e.IPAddress, &e.OSVersion, &e.Status, &lastSeen, &createdAt); err != nil {
+			http.Error(w, "Invalid endpoint row", http.StatusInternalServerError)
+			return
 		}
+		if lastSeen.Valid {
+			ls := lastSeen.Time.UTC().Format(time.RFC3339)
+			e.LastSeen = &ls
+		}
+		if createdAt.Valid {
+			e.CreatedAt = createdAt.Time.UTC().Format(time.RFC3339)
+		}
+		endpoints = append(endpoints, e)
+	}
+	if err := rows.Err(); err != nil {
+		http.Error(w, "Endpoint query failed", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(endpoints)
+	if err := json.NewEncoder(w).Encode(endpoints); err != nil {
+		return
+	}
 }

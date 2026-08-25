@@ -95,7 +95,7 @@ export default function App() {
         createdAt: record.createdAt ? new Date(record.createdAt).toISOString() : fallback?.createdAt ?? new Date().toISOString(),
         hardware: candidate.hardware ?? fallback?.hardware ?? { cpuModel: 'Unknown', cpuCores: 0, cpuLogicalProcessors: 0, gpuModel: 'Unknown', ramTotalMb: 0, motherboardModel: 'Unknown', biosVersion: 'Unknown' },
         disks: candidate.disks ?? fallback?.disks ?? [],
-        osHealth: candidate.osHealth ?? fallback?.osHealth ?? { osVersion: record.osVersion ?? 'Unknown', osBuild: record.osBuild ?? 'Unknown', dismStatus: 'Healthy', sfcStatus: 'No Integrity Violations', driverIssuesCount: 0, reliabilityScore: 0 },
+        osHealth: candidate.osHealth ?? fallback?.osHealth ?? { osVersion: record.osVersion ?? 'Unknown', osBuild: record.osBuild ?? 'Unknown', dismStatus: 'Unavailable', sfcStatus: 'Unavailable', driverIssuesCount: 0 },
         software: candidate.software ?? fallback?.software ?? [],
         processes: candidate.processes ?? fallback?.processes ?? [],
         eventLogs: candidate.eventLogs ?? fallback?.eventLogs ?? [],
