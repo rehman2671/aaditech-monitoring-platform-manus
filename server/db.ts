@@ -1,5 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import crypto from "crypto";
 import { InsertUser, users, departmentCatalog, locationCatalog } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -273,6 +274,10 @@ export async function getApplicationUsage(endpointId: string, orgId = 'org-enter
   }
 }
 
+export function resolveImmutableAssetId(existingAssetId?: string | null, _clientAssetId?: string | null) {
+  return existingAssetId || `SP-${crypto.randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()}`;
+}
+
 export async function recordEndpointMetadata(endpointId: string, values: Partial<typeof endpointMetadata.$inferInsert>, orgId = 'org-enterprise-01') {
   const db = await getDb();
   if (!db) throw new Error('Database unavailable');
@@ -281,5 +286,9 @@ export async function recordEndpointMetadata(endpointId: string, values: Partial
     .where(and(eq(endpoints.id, endpointId), eq(endpoints.organizationId, orgId)))
     .limit(1);
   if (!owned.length) throw new Error('Endpoint is outside the authenticated organization');
-  await db.insert(endpointMetadata).values({ endpointId, ...values }).onDuplicateKeyUpdate({ set: values });
+  const existing = await getEndpointMetadata(endpointId, orgId);
+  const immutableAssetId = resolveImmutableAssetId(existing?.assetId, values.assetId);
+  const { assetId: _ignoredClientAssetId, ...mutableValues } = values;
+  await db.insert(endpointMetadata).values({ endpointId, ...mutableValues, assetId: immutableAssetId }).onDuplicateKeyUpdate({ set: { ...mutableValues, assetId: immutableAssetId } });
+  return { endpointId, assetId: immutableAssetId };
 }

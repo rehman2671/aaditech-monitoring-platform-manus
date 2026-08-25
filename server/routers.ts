@@ -115,8 +115,8 @@ export const appRouter = router({
     })).mutation(async ({ ctx, input }) => {
       if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin role required' });
       const { endpointId, ...values } = input;
-      await recordEndpointMetadata(endpointId, values, getOrganizationId(ctx.user));
-      return { success: true, endpointId };
+      const result = await recordEndpointMetadata(endpointId, values, getOrganizationId(ctx.user));
+      return { success: true, ...result };
     }),
     acknowledgeAlert: protectedProcedure.input(z.object({ alertId: z.string().min(1) })).mutation(async ({ ctx, input }) => {
       if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin role required' });

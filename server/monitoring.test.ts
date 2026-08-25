@@ -59,6 +59,11 @@ describe("monitoring router", () => {
     await expect(caller.monitoring.applicationUsage({ endpointId })).resolves.toEqual([]);
   });
 
+  it("rejects metadata writes outside the authenticated organization", async () => {
+    const caller = appRouter.createCaller(createMockContext('admin', 'org-does-not-exist'));
+    await expect(caller.monitoring.updateEndpointMetadata({ endpointId: 'ep-001-uuid', assetId: 'CLIENT-CONTROLLED' })).rejects.toThrow('outside the authenticated organization');
+  });
+
   it("allows an admin to issue a tenant-scoped refresh request", async () => {
     const caller = appRouter.createCaller(createMockContext('admin'));
     const result = await caller.monitoring.requestRefresh({ modules: ['performance'] });

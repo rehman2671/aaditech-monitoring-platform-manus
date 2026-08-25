@@ -127,3 +127,5 @@
 - [x] Enforce authenticated organization ownership on endpoint metadata writes and validate the secured mutation with TypeScript and monitoring tests.
 
 - [x] Add endpoint-detail Department and Location dropdowns plus admin-gated owner, immutable Asset ID, tags, and maintenance-mode metadata controls backed by the tenant-scoped mutation.
+
+- [x] Make Asset ID server-generated on first metadata write and immutable thereafter; ignore client-supplied asset IDs and add regression coverage.
