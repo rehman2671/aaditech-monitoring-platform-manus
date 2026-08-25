@@ -142,3 +142,5 @@
 
 - [x] Compute true fleet-wide CPU/RAM averages per real timestamp bucket and keep chart labels aligned with that aggregation.
 - [x] Add DashboardOverview regression coverage for the no-performance-evidence empty state and fleet-average chart semantics.
+
+- [x] Add an additive tenant-scoped endpoint metadata audit table and record actor, endpoint, changed fields, and timestamp on every admin metadata mutation.

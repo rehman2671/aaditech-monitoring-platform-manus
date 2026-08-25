@@ -1,7 +1,7 @@
 import { and, eq, sql, or, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import crypto from "crypto";
-import { InsertUser, users, departmentCatalog, locationCatalog } from "../drizzle/schema";
+import { InsertUser, users, departmentCatalog, locationCatalog, endpointMetadataAudit } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -282,17 +282,27 @@ export function resolveImmutableAssetId(existingAssetId?: string | null, _client
   return existingAssetId || `SP-${crypto.randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()}`;
 }
 
-export async function recordEndpointMetadata(endpointId: string, values: Partial<typeof endpointMetadata.$inferInsert>, orgId = 'org-enterprise-01') {
+export async function recordEndpointMetadata(endpointId: string, values: Partial<typeof endpointMetadata.$inferInsert>, orgId = 'org-enterprise-01', actorOpenId = 'system') {
   const db = await getDb();
   if (!db) throw new Error('Database unavailable');
-  const owned = await db.select({ id: endpoints.id })
-    .from(endpoints)
-    .where(and(eq(endpoints.id, endpointId), eq(endpoints.organizationId, orgId)))
-    .limit(1);
-  if (!owned.length) throw new Error('Endpoint is outside the authenticated organization');
-  const existing = await getEndpointMetadata(endpointId, orgId);
-  const immutableAssetId = resolveImmutableAssetId(existing?.assetId, values.assetId);
-  const { assetId: _ignoredClientAssetId, ...mutableValues } = values;
-  await db.insert(endpointMetadata).values({ endpointId, ...mutableValues, assetId: immutableAssetId }).onDuplicateKeyUpdate({ set: { ...mutableValues, assetId: immutableAssetId } });
-  return { endpointId, assetId: immutableAssetId };
+  return db.transaction(async tx => {
+    const owned = await tx.select({ id: endpoints.id })
+      .from(endpoints)
+      .where(and(eq(endpoints.id, endpointId), eq(endpoints.organizationId, orgId)))
+      .limit(1);
+    if (!owned.length) throw new Error('Endpoint is outside the authenticated organization');
+    const existingRows = await tx.select().from(endpointMetadata).where(eq(endpointMetadata.endpointId, endpointId)).limit(1);
+    const existing = existingRows[0];
+    const immutableAssetId = resolveImmutableAssetId(existing?.assetId, values.assetId);
+    const { assetId: _ignoredClientAssetId, ...mutableValues } = values;
+    await tx.insert(endpointMetadata).values({ endpointId, ...mutableValues, assetId: immutableAssetId }).onDuplicateKeyUpdate({ set: { ...mutableValues, assetId: immutableAssetId } });
+    await tx.insert(endpointMetadataAudit).values({
+      organizationId: orgId,
+      endpointId,
+      actorOpenId,
+      action: existing ? 'metadata_updated' : 'metadata_created',
+      changedFields: JSON.stringify(Object.keys(mutableValues).sort()),
+    });
+    return { endpointId, assetId: immutableAssetId };
+  });
 }

@@ -119,6 +119,16 @@ export const endpointMetadata = mysqlTable("endpoint_metadata", {
   maintenanceMode: boolean("maintenanceMode").default(false).notNull(),
 });
 
+export const endpointMetadataAudit = mysqlTable("endpoint_metadata_audit", {
+  id: int("id").autoincrement().primaryKey(),
+  organizationId: varchar("organizationId", { length: 64 }).notNull(),
+  endpointId: varchar("endpointId", { length: 64 }).notNull(),
+  actorOpenId: varchar("actorOpenId", { length: 255 }).notNull(),
+  action: varchar("action", { length: 64 }).notNull(),
+  changedFields: text("changedFields").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export const batteryTelemetry = mysqlTable("battery_telemetry", {
   id: int("id").autoincrement().primaryKey(),
   endpointId: varchar("endpointId", { length: 64 }).notNull(),
