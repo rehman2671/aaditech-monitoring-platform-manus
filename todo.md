@@ -32,3 +32,27 @@
 - [x] Create a new private GitHub repository for the SentinelPulse project.
 - [x] Commit the safe project state on the main branch.
 - [x] Push main to the new private repository and verify the remote tree and commit.
+
+## Approved gap-closure implementation — 2026-08-25
+
+- [x] Baseline and test the current RAM/GPU backend-to-UI contracts before changing mappings.
+- [ ] Correct RAM module speed, slot count, and form-factor propagation and rendering from real evidence.
+- [ ] Replace the single GPU VRAM summary with truthful per-adapter dedicated/shared/unavailable presentation.
+- [ ] Align dashboard collector coverage and health claims with actual evidence and timestamps.
+- [ ] Complete SFC/driver/SMART diagnostic evidence and freshness presentation.
+- [ ] Complete process, software, and event evidence fields and freshness indicators.
+- [ ] Implement alert rule evaluation, tenant scoping, acknowledgement, suppression, and maintenance semantics.
+- [ ] Implement tenant-scoped Department/Location catalogs, dropdowns, Tags behavior, and metadata audit trail.
+- [ ] Harden MSI/enrollment build, signing, URL/token configuration, artifact verification, and zero-manual workflow.
+- [ ] Repair and verify JSON/CSV/PDF exports and live-stream freshness/reconnect behavior.
+- [ ] Run end-to-end regression acceptance tests and publish only verified changes.
+
+- [ ] Add dashboard-level collector freshness timestamps for telemetry, diagnostics, and last successful evidence capture.
+- [ ] Replace dashboard status derivation with explicit backend evidence fields rather than only inferred local fields.
+- [x] Add tests covering timestamped dashboard degraded/limited states and truthful label rendering.
+
+- [x] Add DashboardOverview component tests for explicit-evidence, degraded, and no-evidence status labels.
+- [x] Add DashboardOverview tests for timestamped freshness text and the no-timestamp fallback.
+
+- [x] Add a healthy explicit-evidence DashboardOverview test asserting the TELEMETRY STATUS OBSERVED label.
+- [x] Strengthen the timestamped DashboardOverview test to assert the rendered freshness value for a supplied capturedAt timestamp.

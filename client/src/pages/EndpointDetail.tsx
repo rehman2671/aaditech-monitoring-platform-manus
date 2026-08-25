@@ -268,15 +268,17 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-emerald-400" />
               Windows Image Health & Reliability
+              <span className="text-[10px] font-mono font-normal text-slate-500">Checked: {endpoint.osHealth.checkedAt ? new Date(endpoint.osHealth.checkedAt).toLocaleString() : 'Timestamp unavailable'}</span>
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
                 <span className="text-slate-400 text-xs uppercase">DISM Image Status</span>
-                <div className="text-lg font-bold text-emerald-400">{endpoint.osHealth.dismStatus}</div>
+                <div className={`text-lg font-bold ${endpoint.osHealth.dismStatus === 'Healthy' ? 'text-emerald-400' : 'text-amber-400'}`}>{endpoint.osHealth.dismStatus}</div>
               </div>
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
                 <span className="text-slate-400 text-xs uppercase">SFC Integrity Check</span>
-                <div className="text-base font-bold text-slate-200">{endpoint.osHealth.sfcStatus}</div>
+                <div className={`text-base font-bold ${endpoint.osHealth.sfcStatus === 'No Integrity Violations' ? 'text-emerald-400' : 'text-amber-400'}`}>{endpoint.osHealth.sfcStatus}</div>
+                <div className="text-[10px] text-slate-500">{endpoint.osHealth.sfcDetail ?? 'No execution detail supplied'}</div>
               </div>
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
                 <span className="text-slate-400 text-xs uppercase">Driver Issues</span>
@@ -286,7 +288,7 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
               </div>
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
                 <span className="text-slate-400 text-xs uppercase">Reliability Score</span>
-                <div className="text-lg font-bold text-blue-400">{endpoint.osHealth.reliabilityScore} / 10</div>
+                <div className="text-lg font-bold text-blue-400">{typeof endpoint.osHealth.reliabilityScore === 'number' ? `${endpoint.osHealth.reliabilityScore} / 10` : 'Unavailable'}</div>
               </div>
             </div>
           </div>
@@ -326,7 +328,8 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
         {/* Tab 5: Active Processes */}
         <TabsContent value="processes" className="space-y-6">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
-            <h3 className="text-base font-bold text-white mb-4">Top Resource-Consuming Processes</h3>
+            <h3 className="text-base font-bold text-white mb-1">Process Snapshot</h3>
+            <p className="text-xs text-slate-500 mb-4">{endpoint.processes.length ? (endpoint.processes.every(proc => proc.cpuPercent === 0) ? 'CPU sampling unavailable or rounded to zero in this snapshot.' : 'CPU values are from the latest process sample.') : 'No process snapshot received from the agent.'}</p>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
@@ -345,7 +348,7 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
                       <td className="py-3 px-4 font-bold text-white">{proc.name}</td>
                       <td className="py-3 px-4 text-blue-400">{proc.cpuPercent}%</td>
                       <td className="py-3 px-4 text-emerald-400">{proc.ramMb} MB</td>
-                      <td className="py-3 px-4 text-right text-slate-400 text-[11px]">{proc.username}</td>
+                      <td className="py-3 px-4 text-right text-slate-400 text-[11px]">{proc.username ?? 'Unknown'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -357,7 +360,8 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
         {/* Tab 6: Event Viewer Logs */}
         <TabsContent value="logs" className="space-y-6">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
-            <h3 className="text-base font-bold text-white mb-4">Windows Event Viewer (System & Application Logs)</h3>
+            <h3 className="text-base font-bold text-white mb-1">Windows Event Viewer (System & Application Logs)</h3>
+            <p className="text-xs text-slate-500 mb-4">{endpoint.eventLogs.length ? `${endpoint.eventLogs.length} events in the current snapshot; channel and raw record detail are shown when supplied.` : 'No event snapshot received from the agent.'}</p>
             <div className="space-y-3">
               {endpoint.eventLogs.length === 0 ? (
                 <div className="text-center py-10 text-slate-500 text-xs">No recent critical event logs recorded.</div>
@@ -373,7 +377,7 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
                         }`}>
                           {log.level}
                         </span>
-                        <span className="text-white font-bold">{log.provider} (Event ID: {log.eventId})</span>
+                        <span className="text-white font-bold">{log.provider} (Event ID: {log.eventId}){log.channel ? ` · ${log.channel}` : ''}{typeof log.recordId === 'number' ? ` · Record ${log.recordId}` : ''}</span>
                       </div>
                       <span className="text-slate-500">{new Date(log.timestamp).toLocaleString()}</span>
                     </div>

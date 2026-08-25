@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import React from 'react';
 import { Endpoint, SystemAlert } from '../types';
 import { 
   Server, 
@@ -17,6 +18,7 @@ import {
 import { Link } from 'wouter';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Button } from '@/components/ui/button';
+import { summarizeDashboardEvidence } from '@/lib/dashboardEvidence';
 
 interface DashboardOverviewProps {
   endpoints: Endpoint[];
@@ -29,6 +31,11 @@ export default function DashboardOverview({ endpoints, alerts, onAcknowledgeAler
   const warningCount = endpoints.filter(e => e.status === 'warning').length;
   const offlineCount = endpoints.filter(e => e.status === 'offline').length;
   const totalCount = endpoints.length;
+  const evidenceSummary = summarizeDashboardEvidence(endpoints);
+  const { records: explicitEvidence, hasExplicitEvidence, limitationCount: evidenceWithLimitations, latestCapturedAt: latestEvidenceAt } = evidenceSummary;
+  const endpointsWithPerformanceEvidence = endpoints.filter(endpoint => endpoint.metricsHistory.length > 0).length;
+  const endpointsWithDiagnosticLimitations = endpoints.filter(endpoint => endpoint.osHealth.sfcStatus !== 'No Integrity Violations' || endpoint.osHealth.driverIssuesCount > 0 || endpoint.disks.some(disk => disk.smartHealth === 'Unknown')).length;
+  const evidenceFreshness = latestEvidenceAt ? new Date(latestEvidenceAt).toLocaleString() : 'No timestamp supplied';
 
   const unacknowledgedAlerts = alerts.filter(a => !a.acknowledged);
 
@@ -52,10 +59,11 @@ export default function DashboardOverview({ endpoints, alerts, onAcknowledgeAler
           <p className="text-sm text-slate-400 mt-1">Real-time Windows endpoint telemetry, hardware health, and automated diagnostics.</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-semibold">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            ALL WMI COLLECTORS NOMINAL
+            <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-mono font-semibold ${!hasExplicitEvidence || endpointsWithDiagnosticLimitations || evidenceWithLimitations ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-blue-500/10 border-blue-500/30 text-blue-300'}`}>
+            <span className={`w-2 h-2 rounded-full ${!hasExplicitEvidence || endpointsWithDiagnosticLimitations || evidenceWithLimitations ? 'bg-amber-400' : 'bg-blue-400'}`}></span>
+            {!hasExplicitEvidence ? 'COLLECTOR EVIDENCE NOT SUPPLIED' : endpointsWithDiagnosticLimitations || evidenceWithLimitations ? 'DIAGNOSTIC LIMITATIONS PRESENT' : 'TELEMETRY STATUS OBSERVED'}
           </span>
+          <span className="text-[10px] text-slate-500 font-mono">Latest evidence: {evidenceFreshness}</span>
         </div>
       </div>
 
@@ -77,7 +85,7 @@ export default function DashboardOverview({ endpoints, alerts, onAcknowledgeAler
               <CheckCircle2 className="w-3.5 h-3.5" />
               {onlineCount} Online
             </span>
-            <span className="text-slate-500 font-mono">100% WMI Coverage</span>
+            <span className="text-slate-500 font-mono">{hasExplicitEvidence ? `${explicitEvidence.length} collector evidence records` : `${endpointsWithPerformanceEvidence}/${totalCount || 0} observed samples`}</span>
           </div>
         </div>
 
@@ -93,8 +101,8 @@ export default function DashboardOverview({ endpoints, alerts, onAcknowledgeAler
             </div>
           </div>
           <div className="mt-4 flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/80">
-            <span className="text-amber-400 font-medium">SMART / Disk threshold</span>
-            <span className="text-slate-500 font-mono">Requires review</span>
+            <span className="text-amber-400 font-medium">Evidence requiring review</span>
+            <span className="text-slate-500 font-mono">{endpointsWithDiagnosticLimitations} endpoint{endpointsWithDiagnosticLimitations === 1 ? '' : 's'} flagged</span>
           </div>
         </div>
 

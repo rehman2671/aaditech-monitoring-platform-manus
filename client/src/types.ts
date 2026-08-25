@@ -19,6 +19,13 @@ export interface AuthSession {
   user: AuthUser;
 }
 
+export interface CollectorEvidence {
+  collector: string;
+  status: 'success' | 'partial' | 'failed' | 'unavailable';
+  capturedAt?: string;
+  detail?: string;
+}
+
 export interface DashboardSummary {
   totalEndpoints: number;
   onlineEndpoints: number;
@@ -26,6 +33,7 @@ export interface DashboardSummary {
   warningEndpoints: number;
   activeAlerts: number;
   diskCriticalCount: number;
+  collectorEvidence?: CollectorEvidence[];
 }
 
 export interface AlertRuleContract {
@@ -76,7 +84,25 @@ export interface DiskInfo {
   totalGb: number;
   freeGb: number;
   usedGb: number;
-  smartHealth: 'Healthy' | 'Warning' | 'Failing';
+  smartHealth: 'Healthy' | 'Warning' | 'Failing' | 'Unknown';
+}
+
+export interface MemoryModuleInfo {
+  id: string;
+  capacityMb?: number;
+  speedMtps?: number;
+  manufacturer?: string;
+  partNumber?: string;
+  formFactor?: string;
+}
+
+export interface GraphicsAdapterInfo {
+  id: string;
+  model: string;
+  dedicatedMemoryMb?: number;
+  sharedMemoryMb?: number;
+  utilizationPercent?: number;
+  memorySource?: 'wmi' | 'dxdiag' | 'task_manager' | 'unknown';
 }
 
 export interface HardwareInfo {
@@ -88,15 +114,20 @@ export interface HardwareInfo {
   motherboardModel: string;
   biosVersion: string;
   serialNumber?: string;
+  memoryModules?: MemoryModuleInfo[];
+  graphicsAdapters?: GraphicsAdapterInfo[];
 }
 
 export interface OsHealthInfo {
   osVersion: string;
   osBuild: string;
-  dismStatus: 'Healthy' | 'Repairable' | 'Corrupt';
-  sfcStatus: 'No Integrity Violations' | 'Corrupt Files Repaired' | 'Unresolved Issues';
+  dismStatus: 'Healthy' | 'Repairable' | 'Corrupt' | 'Unavailable';
+  sfcStatus: 'No Integrity Violations' | 'Corrupt Files Repaired' | 'Unresolved Issues' | 'Unavailable';
   driverIssuesCount: number;
-  reliabilityScore: number; // out of 10
+  reliabilityScore?: number; // out of 10; absent when not collected
+  checkedAt?: string;
+  sfcDetail?: string;
+  driverIssues?: { deviceName: string; problemCode?: string; description?: string }[];
 }
 
 export interface SoftwareApp {
@@ -104,8 +135,8 @@ export interface SoftwareApp {
   name: string;
   publisher: string;
   version: string;
-  installedAt: string;
-  sizeMb: number;
+  installedAt?: string;
+  sizeMb?: number;
 }
 
 export interface ProcessMetric {
@@ -113,7 +144,10 @@ export interface ProcessMetric {
   name: string;
   cpuPercent: number;
   ramMb: number;
-  username: string;
+  username?: string;
+  executablePath?: string;
+  commandLine?: string;
+  integrityLevel?: string;
 }
 
 export interface EventLogItem {
@@ -123,6 +157,9 @@ export interface EventLogItem {
   provider: string;
   eventId: number;
   message: string;
+  channel?: string;
+  recordId?: number;
+  taskCategory?: string;
 }
 
 export interface Endpoint {
@@ -151,6 +188,21 @@ export interface Endpoint {
     ram: number;
     diskIO: number;
   }[];
+  metadata?: {
+    department?: string;
+    location?: string;
+    assignedUser?: string;
+    assetId?: string;
+    tags?: string;
+    maintenanceMode?: boolean;
+  };
+  extendedHardware?: ExtendedHardwareInfo;
+  extendedDisks?: ExtendedDiskInfo[];
+  battery?: BatteryInfo;
+  networkAdapters?: NetworkAdapterInfo[];
+  healthScore?: number;
+  applicationUsage?: { appName: string; activeSeconds: number; cpuTimeSeconds: number; networkBytes?: number; launchCount: number; lastUsedAt: string }[];
+  collectorEvidence?: CollectorEvidence[];
 }
 
 export interface AlertRule {
@@ -222,9 +274,9 @@ export interface MSIBuildJob {
 }
 
 export interface ExtendedHardwareInfo extends HardwareInfo {
-  cpuClockSpeedMhz: number;
+  cpuClockSpeedMhz?: number;
   cpuTemperatureCelsius?: number;
-  gpuVramMb: number;
+  gpuVramMb?: number;
   gpuUtilizationPercent?: number;
   peripherals: { id: string; name: string; deviceType: string }[];
 }
@@ -237,12 +289,12 @@ export interface ExtendedDiskInfo extends DiskInfo {
 }
 
 export interface BatteryInfo {
-  chargePercent: number;
-  healthPercent: number;
+  chargePercent?: number;
+  healthPercent?: number;
   chargingStatus: 'Charging' | 'Discharging' | 'FullyCharged' | 'Unknown';
-  designCapacityMah: number;
-  fullChargeCapacityMah: number;
-  cycleCount: number;
+  designCapacityMah?: number;
+  fullChargeCapacityMah?: number;
+  cycleCount?: number;
   temperatureCelsius?: number;
 }
 

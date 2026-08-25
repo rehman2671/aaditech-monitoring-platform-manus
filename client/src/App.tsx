@@ -75,15 +75,17 @@ export default function App() {
     if (!endpointQuery.data) return;
     setEndpoints(prev => endpointQuery.data.map(record => {
       const fallback = prev.find(endpoint => endpoint.id === record.id);
+      const candidate = record as typeof record & Partial<Endpoint> & { extendedHardware?: Endpoint['hardware']; extendedDisks?: Endpoint['disks']; metadata?: Endpoint['metadata'] };
       const mappedStatus = record.status === 'pending' ? 'warning' : record.status === 'disabled' ? 'offline' : record.status;
       return {
         ...fallback,
+        ...candidate,
         id: record.id,
         organizationId: record.organizationId,
         hostname: record.hostname,
         serialNumber: record.serialNumber,
-        ipAddress: fallback?.ipAddress ?? '',
-        macAddress: fallback?.macAddress ?? '',
+        ipAddress: candidate.ipAddress ?? fallback?.ipAddress ?? '',
+        macAddress: candidate.macAddress ?? fallback?.macAddress ?? '',
         osVersion: record.osVersion ?? fallback?.osVersion ?? 'Unknown',
         osBuild: record.osBuild ?? fallback?.osBuild ?? 'Unknown',
         domainOrWorkgroup: record.domainOrWorkgroup ?? fallback?.domainOrWorkgroup ?? 'Unknown',
@@ -91,13 +93,13 @@ export default function App() {
         status: mappedStatus,
         lastSeenAt: new Date(record.lastSeenAt).toISOString(),
         createdAt: record.createdAt ? new Date(record.createdAt).toISOString() : fallback?.createdAt ?? new Date().toISOString(),
-        hardware: fallback?.hardware ?? { cpuModel: 'Unknown', cpuCores: 0, cpuLogicalProcessors: 0, gpuModel: 'Unknown', ramTotalMb: 0, motherboardModel: 'Unknown', biosVersion: 'Unknown' },
-        disks: fallback?.disks ?? [],
-        osHealth: fallback?.osHealth ?? { osVersion: record.osVersion ?? 'Unknown', osBuild: record.osBuild ?? 'Unknown', dismStatus: 'Healthy', sfcStatus: 'No Integrity Violations', driverIssuesCount: 0, reliabilityScore: 0 },
-        software: fallback?.software ?? [],
-        processes: fallback?.processes ?? [],
-        eventLogs: fallback?.eventLogs ?? [],
-        metricsHistory: fallback?.metricsHistory ?? [],
+        hardware: candidate.hardware ?? fallback?.hardware ?? { cpuModel: 'Unknown', cpuCores: 0, cpuLogicalProcessors: 0, gpuModel: 'Unknown', ramTotalMb: 0, motherboardModel: 'Unknown', biosVersion: 'Unknown' },
+        disks: candidate.disks ?? fallback?.disks ?? [],
+        osHealth: candidate.osHealth ?? fallback?.osHealth ?? { osVersion: record.osVersion ?? 'Unknown', osBuild: record.osBuild ?? 'Unknown', dismStatus: 'Healthy', sfcStatus: 'No Integrity Violations', driverIssuesCount: 0, reliabilityScore: 0 },
+        software: candidate.software ?? fallback?.software ?? [],
+        processes: candidate.processes ?? fallback?.processes ?? [],
+        eventLogs: candidate.eventLogs ?? fallback?.eventLogs ?? [],
+        metricsHistory: candidate.metricsHistory ?? fallback?.metricsHistory ?? [],
       };
     }));
   }, [endpointQuery.data]);
