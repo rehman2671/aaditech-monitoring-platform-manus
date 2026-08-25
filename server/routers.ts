@@ -38,16 +38,19 @@ export const appRouter = router({
     }),
   }),
   monitoring: router({
-    summary: protectedProcedure.query(async () => {
-      const eps = await getEndpoints();
-      const alerts = await getSystemAlerts();
+    summary: protectedProcedure.query(async ({ ctx }) => {
+      const organizationId = getOrganizationId(ctx.user);
+      const eps = await getEndpoints(organizationId);
+      const alerts = await getSystemAlerts(organizationId);
       return {
         totalEndpoints: eps.length,
         onlineEndpoints: eps.filter(e => e.status === 'online').length,
         offlineEndpoints: eps.filter(e => e.status === 'offline').length,
         warningEndpoints: eps.filter(e => e.status === 'pending').length,
         activeAlerts: alerts.filter(a => !a.acknowledged).length,
-        diskCriticalCount: 1,
+        // Disk-critical evidence is not persisted by this dashboard schema yet;
+        // report zero rather than inventing a critical device count.
+        diskCriticalCount: 0,
       };
     }),
     endpoints: protectedProcedure.query(async ({ ctx }) => {

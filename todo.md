@@ -117,3 +117,7 @@
 - [x] Enforce endpoint ownership on metadata, battery, network, and application-usage enrichment queries and add a cross-tenant regression test for the enriched payload.
 
 - [x] Add focused monitoring tests proving metadata, battery, network, and application-usage evidence for an endpoint is unavailable when the authenticated organization does not own that endpoint.
+
+- [x] Synchronize the repository-defined metadata and optional telemetry tables into the connected database with additive SQL and verify their presence and row counts without inserting data.
+
+- [x] Remove the fabricated dashboard diskCriticalCount value and report zero or an evidence-derived count until disk-health evidence is actually persisted.
