@@ -2,7 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
-import { getEndpoints, getEnrichedEndpoints, getAlertRules, getSystemAlerts, getEnrollmentTokens, getEndpointMetadata, getLatestBatteryTelemetry, getLatestNetworkTelemetry, getApplicationUsage, recordEndpointMetadata, acknowledgeSystemAlert, setAlertRuleEnabled } from "./db";
+import { getEndpoints, getEnrichedEndpoints, getAlertRules, getSystemAlerts, getEnrollmentTokens, getEndpointMetadata, getLatestBatteryTelemetry, getLatestNetworkTelemetry, getApplicationUsage, recordEndpointMetadata, acknowledgeSystemAlert, setAlertRuleEnabled, listDepartmentCatalog, listLocationCatalog, createDepartmentCatalogEntry, createLocationCatalogEntry } from "./db";
 import { z } from "zod";
 import path from "path";
 import crypto from "crypto";
@@ -14,6 +14,13 @@ import { broadcastRealtimeEvent } from './realtime';
 function getOrganizationId(user: NonNullable<TrpcContext['user']>) {
   return user.organizationId;
 }
+
+const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== 'admin') {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Administrator role required.' });
+  }
+  return next();
+});
 
 async function getReportInputs(orgId: string) {
   const endpoints = await getEndpoints(orgId);
@@ -77,6 +84,18 @@ export const appRouter = router({
     applicationUsage: protectedProcedure.input(z.object({ endpointId: z.string().min(1) })).query(async ({ ctx, input }) => {
       return getApplicationUsage(input.endpointId, getOrganizationId(ctx.user));
     }),
+    departments: protectedProcedure.query(async ({ ctx }) => listDepartmentCatalog(getOrganizationId(ctx.user))),
+    locations: protectedProcedure.query(async ({ ctx }) => listLocationCatalog(getOrganizationId(ctx.user))),
+    createDepartment: adminProcedure.input(z.object({ name: z.string().trim().min(1).max(128) })).mutation(async ({ ctx, input }) => {
+      const entry = { id: crypto.randomUUID(), organizationId: getOrganizationId(ctx.user), name: input.name, createdAt: new Date() };
+      await createDepartmentCatalogEntry(entry);
+      return entry;
+    }),
+    createLocation: adminProcedure.input(z.object({ name: z.string().trim().min(1).max(128) })).mutation(async ({ ctx, input }) => {
+      const entry = { id: crypto.randomUUID(), organizationId: getOrganizationId(ctx.user), name: input.name, createdAt: new Date() };
+      await createLocationCatalogEntry(entry);
+      return entry;
+    }),
     healthScore: protectedProcedure.input(z.object({
       cpuUtilizationPercent: z.number().min(0).max(100).optional(),
       memoryUtilizationPercent: z.number().min(0).max(100).optional(),
@@ -96,7 +115,7 @@ export const appRouter = router({
     })).mutation(async ({ ctx, input }) => {
       if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin role required' });
       const { endpointId, ...values } = input;
-      await recordEndpointMetadata(endpointId, values);
+      await recordEndpointMetadata(endpointId, values, getOrganizationId(ctx.user));
       return { success: true, endpointId };
     }),
     acknowledgeAlert: protectedProcedure.input(z.object({ alertId: z.string().min(1) })).mutation(async ({ ctx, input }) => {

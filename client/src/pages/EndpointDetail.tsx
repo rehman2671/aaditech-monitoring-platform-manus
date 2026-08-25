@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Endpoint } from '../types';
 import { 
   ArrowLeft, 
@@ -23,6 +23,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { toast } from 'sonner';
 import ExtendedTelemetryPanel from '@/components/ExtendedTelemetryPanel';
+import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
 
 interface EndpointDetailProps {
   endpoints: Endpoint[];
@@ -35,6 +37,42 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
 
   const endpoint = endpoints.find(e => e.id === endpointId) || endpoints[0];
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { user } = useAuth();
+  const utils = trpc.useUtils();
+  const departments = trpc.monitoring.departments.useQuery();
+  const locations = trpc.monitoring.locations.useQuery();
+  const updateMetadata = trpc.monitoring.updateEndpointMetadata.useMutation({
+    onSuccess: () => { void utils.monitoring.endpoints.invalidate(); toast.success('Endpoint metadata saved'); },
+    onError: (error) => toast.error('Metadata was not saved', { description: error.message }),
+  });
+  const [department, setDepartment] = useState('none');
+  const [location, setLocation] = useState('none');
+  const [assignedUser, setAssignedUser] = useState('');
+  const [assetId, setAssetId] = useState('');
+  const [tags, setTags] = useState('');
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+
+  useEffect(() => {
+    setDepartment(endpoint?.metadata?.department || 'none');
+    setLocation(endpoint?.metadata?.location || 'none');
+    setAssignedUser(endpoint?.metadata?.assignedUser || '');
+    setAssetId(endpoint?.metadata?.assetId || '');
+    setTags(endpoint?.metadata?.tags || '');
+    setMaintenanceMode(Boolean(endpoint?.metadata?.maintenanceMode));
+  }, [endpoint?.id, endpoint?.metadata]);
+
+  const saveMetadata = () => {
+    if (!endpoint || user?.role !== 'admin') return toast.error('Admin role required');
+    updateMetadata.mutate({
+      endpointId: endpoint.id,
+      department: department === 'none' ? null : department,
+      location: location === 'none' ? null : location,
+      assignedUser: assignedUser.trim() || null,
+      assetId: assetId.trim() || null,
+      tags: tags.trim() || null,
+      maintenanceMode,
+    });
+  };
 
   const handleOnDemandClick = async () => {
     setIsRefreshing(true);
@@ -191,6 +229,20 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
                   <span className="font-mono text-emerald-400">{new Date(endpoint.lastSeenAt).toLocaleString()}</span>
                 </div>
               </div>
+            </div>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div><h3 className="text-base font-bold text-white">Device Management</h3><p className="text-xs text-slate-400 mt-1">Tenant-scoped administrative metadata; Asset ID remains immutable once assigned.</p></div>
+              {user?.role === 'admin' && <Button onClick={saveMetadata} disabled={updateMetadata.isPending} className="bg-blue-600">{updateMetadata.isPending ? 'Saving…' : 'Save metadata'}</Button>}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              <label className="space-y-2"><span className="text-slate-400">Department</span><select value={department} onChange={e => setDepartment(e.target.value)} disabled={user?.role !== 'admin'} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white"><option value="none">Unassigned</option>{departments.data?.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}</select></label>
+              <label className="space-y-2"><span className="text-slate-400">Location</span><select value={location} onChange={e => setLocation(e.target.value)} disabled={user?.role !== 'admin'} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white"><option value="none">Unassigned</option>{locations.data?.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}</select></label>
+              <label className="space-y-2"><span className="text-slate-400">Assigned user</span><input value={assignedUser} onChange={e => setAssignedUser(e.target.value)} disabled={user?.role !== 'admin'} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white" placeholder="Unassigned" /></label>
+              <label className="space-y-2"><span className="text-slate-400">Asset ID</span><input value={assetId} onChange={e => setAssetId(e.target.value)} disabled={user?.role !== 'admin' || Boolean(endpoint.metadata?.assetId)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white disabled:opacity-60" placeholder="Auto-generated / immutable" /></label>
+              <label className="space-y-2"><span className="text-slate-400">Tags</span><input value={tags} onChange={e => setTags(e.target.value)} disabled={user?.role !== 'admin'} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white" placeholder="Comma-separated" /></label>
+              <label className="flex items-center gap-3 pt-6 text-slate-300"><input type="checkbox" checked={maintenanceMode} onChange={e => setMaintenanceMode(e.target.checked)} disabled={user?.role !== 'admin'} /> Maintenance mode <span className="text-slate-500">(alert policy)</span></label>
             </div>
           </div>
           <ExtendedTelemetryPanel endpoint={endpoint} />

@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, departmentCatalog, locationCatalog } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -80,6 +80,32 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
   }
+}
+
+export async function listDepartmentCatalog(orgId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(departmentCatalog).where(eq(departmentCatalog.organizationId, orgId)).orderBy(sql`name ASC`);
+}
+
+export async function listLocationCatalog(orgId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(locationCatalog).where(eq(locationCatalog.organizationId, orgId)).orderBy(sql`name ASC`);
+}
+
+export async function createDepartmentCatalogEntry(entry: typeof departmentCatalog.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error('Database unavailable');
+  await db.insert(departmentCatalog).values(entry);
+  return entry;
+}
+
+export async function createLocationCatalogEntry(entry: typeof locationCatalog.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error('Database unavailable');
+  await db.insert(locationCatalog).values(entry);
+  return entry;
 }
 
 export async function getUserByOpenId(openId: string) {
@@ -247,8 +273,13 @@ export async function getApplicationUsage(endpointId: string, orgId = 'org-enter
   }
 }
 
-export async function recordEndpointMetadata(endpointId: string, values: Partial<typeof endpointMetadata.$inferInsert>) {
+export async function recordEndpointMetadata(endpointId: string, values: Partial<typeof endpointMetadata.$inferInsert>, orgId = 'org-enterprise-01') {
   const db = await getDb();
-  if (!db) return;
+  if (!db) throw new Error('Database unavailable');
+  const owned = await db.select({ id: endpoints.id })
+    .from(endpoints)
+    .where(and(eq(endpoints.id, endpointId), eq(endpoints.organizationId, orgId)))
+    .limit(1);
+  if (!owned.length) throw new Error('Endpoint is outside the authenticated organization');
   await db.insert(endpointMetadata).values({ endpointId, ...values }).onDuplicateKeyUpdate({ set: values });
 }

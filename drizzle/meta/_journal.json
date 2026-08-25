@@ -29,6 +29,13 @@
       "when": 1787667544324,
       "tag": "0003_brave_mastermind",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1787668775172,
+      "tag": "0004_classy_karnak",
+      "breakpoints": true
     }
   ]
 }

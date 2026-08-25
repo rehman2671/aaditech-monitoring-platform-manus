@@ -40,6 +40,20 @@ export const organizations = mysqlTable("organizations", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const departmentCatalog = mysqlTable("department_catalog", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 64 }).notNull(),
+  name: varchar("name", { length: 128 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const locationCatalog = mysqlTable("location_catalog", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 64 }).notNull(),
+  name: varchar("name", { length: 128 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export const endpoints = mysqlTable("endpoints", {
   id: varchar("id", { length: 64 }).primaryKey(),
   organizationId: varchar("organizationId", { length: 64 }).notNull(),

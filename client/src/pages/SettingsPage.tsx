@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Database, Save, LockKeyhole, Trash2, ShieldAlert } from 'lucide-react';
+import { Database, Save, LockKeyhole, Trash2, ShieldAlert, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { trpc } from '@/lib/trpc';
 
 interface SettingsPageProps { canWrite: boolean; accessToken: string; }
 
@@ -10,6 +11,19 @@ export default function SettingsPage({ canWrite, accessToken }: SettingsPageProp
   const [heartbeatInterval, setHeartbeatInterval] = useState('60');
   const [purgeRetentionDays, setPurgeRetentionDays] = useState('90');
   const [isPurging, setIsPurging] = useState(false);
+  const [departmentName, setDepartmentName] = useState('');
+  const [locationName, setLocationName] = useState('');
+  const utils = trpc.useUtils();
+  const departments = trpc.monitoring.departments.useQuery();
+  const locations = trpc.monitoring.locations.useQuery();
+  const createDepartment = trpc.monitoring.createDepartment.useMutation({
+    onSuccess: () => { setDepartmentName(''); void utils.monitoring.departments.invalidate(); toast.success('Department group added'); },
+    onError: (error) => toast.error('Department group was not added', { description: error.message }),
+  });
+  const createLocation = trpc.monitoring.createLocation.useMutation({
+    onSuccess: () => { setLocationName(''); void utils.monitoring.locations.invalidate(); toast.success('Location group added'); },
+    onError: (error) => toast.error('Location group was not added', { description: error.message }),
+  });
 
   const handleSave = () => {
     if (!canWrite) {
@@ -59,6 +73,17 @@ export default function SettingsPage({ canWrite, accessToken }: SettingsPageProp
     }
   };
 
+  const addDepartment = () => {
+    if (!canWrite) return toast.error('Admin RBAC required');
+    if (!departmentName.trim()) return toast.error('Enter a department name');
+    createDepartment.mutate({ name: departmentName.trim() });
+  };
+  const addLocation = () => {
+    if (!canWrite) return toast.error('Admin RBAC required');
+    if (!locationName.trim()) return toast.error('Enter a location name');
+    createLocation.mutate({ name: locationName.trim() });
+  };
+
   return (
     <div className="p-8 space-y-6 max-w-4xl mx-auto">
       <div>
@@ -82,6 +107,28 @@ export default function SettingsPage({ canWrite, accessToken }: SettingsPageProp
           <label className="space-y-2"><span className="font-semibold text-slate-300 block">Agent heartbeat interval</span><select disabled={!canWrite} value={heartbeatInterval} onChange={(e) => setHeartbeatInterval(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 font-mono disabled:opacity-50"><option value="30">30 Seconds</option><option value="60">60 Seconds</option><option value="300">5 Minutes</option></select></label>
         </div>
         <div className="pt-4 border-t border-slate-800 flex justify-end"><Button onClick={handleSave} disabled={!canWrite} className="bg-blue-600 hover:bg-blue-500 font-semibold gap-2 disabled:opacity-50"><Save className="w-4 h-4" /> {canWrite ? 'Save Changes' : 'Admin Role Required'}</Button></div>
+      </div>
+
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-6">
+        <div className="flex items-start justify-between border-b border-slate-800 pb-3">
+          <div>
+            <h3 className="text-base font-bold text-white flex items-center gap-2"><ShieldAlert className="w-5 h-5 text-violet-400" /> Department & Location Catalogs</h3>
+            <p className="text-xs text-slate-400 mt-1">Tenant-scoped groups used for endpoint ownership and regional assignment. Empty catalogs remain explicitly empty.</p>
+          </div>
+          {!canWrite && <span className="text-[10px] font-mono uppercase text-amber-400">Admin role required to add</span>}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <label className="text-xs font-semibold text-slate-300">Department group</label>
+            <div className="flex gap-2"><input value={departmentName} onChange={e => setDepartmentName(e.target.value)} disabled={!canWrite || createDepartment.isPending} placeholder="e.g. Operations" className="min-w-0 flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white" /><Button onClick={addDepartment} disabled={!canWrite || createDepartment.isPending} size="sm" className="bg-blue-600"><Plus className="w-4 h-4" />{createDepartment.isPending && <Loader2 className="w-4 h-4 animate-spin" />}</Button></div>
+            <div className="flex flex-wrap gap-2">{departments.data?.map(item => <span key={item.id} className="text-xs rounded-full bg-blue-500/10 border border-blue-500/20 px-3 py-1 text-blue-200">{item.name}</span>)}{!departments.isLoading && !departments.data?.length && <span className="text-xs text-slate-500">No department groups defined</span>}</div>
+          </div>
+          <div className="space-y-3">
+            <label className="text-xs font-semibold text-slate-300">Location group</label>
+            <div className="flex gap-2"><input value={locationName} onChange={e => setLocationName(e.target.value)} disabled={!canWrite || createLocation.isPending} placeholder="e.g. North Region" className="min-w-0 flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white" /><Button onClick={addLocation} disabled={!canWrite || createLocation.isPending} size="sm" className="bg-blue-600"><Plus className="w-4 h-4" />{createLocation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}</Button></div>
+            <div className="flex flex-wrap gap-2">{locations.data?.map(item => <span key={item.id} className="text-xs rounded-full bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 text-indigo-200">{item.name}</span>)}{!locations.isLoading && !locations.data?.length && <span className="text-xs text-slate-500">No location groups defined</span>}</div>
+          </div>
+        </div>
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-6">

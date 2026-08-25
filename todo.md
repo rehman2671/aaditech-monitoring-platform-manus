@@ -121,3 +121,9 @@
 - [x] Synchronize the repository-defined metadata and optional telemetry tables into the connected database with additive SQL and verify their presence and row counts without inserting data.
 
 - [x] Remove the fabricated dashboard diskCriticalCount value and report zero or an evidence-derived count until disk-health evidence is actually persisted.
+
+- [x] Add authenticated tenant-scoped Department and Location catalog list/create procedures, additive tables, and an admin-gated Settings UI with truthful empty states.
+
+- [x] Enforce authenticated organization ownership on endpoint metadata writes and validate the secured mutation with TypeScript and monitoring tests.
+
+- [x] Add endpoint-detail Department and Location dropdowns plus admin-gated owner, immutable Asset ID, tags, and maintenance-mode metadata controls backed by the tenant-scoped mutation.
