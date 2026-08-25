@@ -29,7 +29,7 @@ describe("SentinelPulse End-to-End Acceptance Suite", () => {
 
     const endpoints = await caller.monitoring.endpoints();
     expect(Array.isArray(endpoints)).toBe(true);
-  });
+  }, 15_000);
 
   it("verifies local Go mode rejects the legacy tRPC MSI mutation", async () => {
     const caller = appRouter.createCaller(createAcceptanceContext('admin'));

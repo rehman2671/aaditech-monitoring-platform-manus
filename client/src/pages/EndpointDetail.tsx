@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Endpoint } from '../types';
 import { 
   ArrowLeft, 
@@ -218,11 +218,11 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Total RAM:</span>
-                  <span className="font-mono text-slate-200">{Math.round(endpoint.hardware.ramTotalMb / 1024)} GB</span>
+                  <span className="font-mono text-slate-200">{typeof endpoint.hardware.ramTotalMb === 'number' ? `${Math.round(endpoint.hardware.ramTotalMb / 1024)} GB` : 'Unavailable'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">CPU Cores:</span>
-                  <span className="font-mono text-slate-200">{endpoint.hardware.cpuCores} Cores ({endpoint.hardware.cpuLogicalProcessors} Threads)</span>
+                  <span className="font-mono text-slate-200">{typeof endpoint.hardware.cpuCores === 'number' ? `${endpoint.hardware.cpuCores} Cores` : 'Cores unavailable'} ({typeof endpoint.hardware.cpuLogicalProcessors === 'number' ? `${endpoint.hardware.cpuLogicalProcessors} Threads` : 'Threads unavailable'})</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Last Seen:</span>
@@ -315,7 +315,7 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
         </TabsContent>
 
         {/* Tab 3: OS Health & Drivers */}
-        <TabsContent value="oshealth" className="space-y-6">
+        <TabsContent value="oshealth" forceMount className="space-y-6">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-6">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-emerald-400" />
@@ -334,8 +334,8 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
               </div>
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
                 <span className="text-slate-400 text-xs uppercase">Driver Issues</span>
-                <div className={`text-lg font-bold ${endpoint.osHealth.driverIssuesCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                  {endpoint.osHealth.driverIssuesCount} Detected
+                <div className={`text-lg font-bold ${typeof endpoint.osHealth.driverIssuesCount === 'number' && endpoint.osHealth.driverIssuesCount > 0 ? 'text-amber-400' : 'text-amber-400'}`}>
+                  {typeof endpoint.osHealth.driverIssuesCount === 'number' ? `${endpoint.osHealth.driverIssuesCount} Detected` : 'Unavailable'}
                 </div>
               </div>
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1">

@@ -154,8 +154,8 @@ export default function EndpointsList({ endpoints, searchQuery, onSearchChange }
                       <span className="text-[10px] text-slate-400 font-mono">{ep.domainOrWorkgroup} • Build {ep.osBuild}</span>
                     </td>
                     <td className="py-4 px-5 font-mono text-slate-300">
-                      <div>{ep.hardware.cpuModel.split(' ')[0]} ({ep.hardware.cpuCores}C / {ep.hardware.cpuLogicalProcessors}T)</div>
-                      <div className="text-[10px] text-slate-400">{Math.round(ep.hardware.ramTotalMb / 1024)} GB RAM • {ep.disks.length} Disk(s)</div>
+                      <div>{ep.hardware.cpuModel.split(' ')[0]} ({typeof ep.hardware.cpuCores === 'number' ? `${ep.hardware.cpuCores}C` : 'cores unavailable'} / {typeof ep.hardware.cpuLogicalProcessors === 'number' ? `${ep.hardware.cpuLogicalProcessors}T` : 'threads unavailable'})</div>
+                      <div className="text-[10px] text-slate-400">{typeof ep.hardware.ramTotalMb === 'number' ? `${Math.round(ep.hardware.ramTotalMb / 1024)} GB RAM` : 'RAM unavailable'} • {ep.disks.length} Disk(s)</div>
                     </td>
                     <td className="py-4 px-5 font-mono text-slate-300">
                       <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[11px]">{ep.agentVersion}</span>

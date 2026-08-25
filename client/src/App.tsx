@@ -22,6 +22,7 @@ import type { AuthSession, Endpoint, AlertRule, SystemAlert, EnrollmentToken, Re
 import { toast } from 'sonner';
 import { SseRealtimeClient } from '@/lib/sseRealtime';
 import { api } from '@/lib/api';
+import { evidenceFallback, normalizeEndpointStatus, normalizeEndpointTimestamp } from '@/lib/endpointNormalization';
 
 function createClientRowId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -76,26 +77,26 @@ export default function App() {
     setEndpoints(prev => endpointQuery.data.map(record => {
       const fallback = prev.find(endpoint => endpoint.id === record.id);
       const candidate = record as typeof record & Partial<Endpoint> & { extendedHardware?: Endpoint['hardware']; extendedDisks?: Endpoint['disks']; metadata?: Endpoint['metadata'] };
-      const mappedStatus = record.status === 'pending' ? 'warning' : record.status === 'disabled' ? 'offline' : record.status;
+      const mappedStatus = normalizeEndpointStatus(record.status);
       return {
         ...fallback,
         ...candidate,
         id: record.id,
         organizationId: record.organizationId,
         hostname: record.hostname,
-        serialNumber: record.serialNumber,
-        ipAddress: candidate.ipAddress ?? fallback?.ipAddress ?? '',
-        macAddress: candidate.macAddress ?? fallback?.macAddress ?? '',
-        osVersion: record.osVersion ?? fallback?.osVersion ?? 'Unknown',
-        osBuild: record.osBuild ?? fallback?.osBuild ?? 'Unknown',
-        domainOrWorkgroup: record.domainOrWorkgroup ?? fallback?.domainOrWorkgroup ?? 'Unknown',
-        agentVersion: record.agentVersion ?? fallback?.agentVersion ?? 'Unknown',
+        serialNumber: evidenceFallback(record.serialNumber ?? fallback?.serialNumber),
+        ipAddress: evidenceFallback(candidate.ipAddress ?? fallback?.ipAddress),
+        macAddress: evidenceFallback(candidate.macAddress ?? fallback?.macAddress),
+        osVersion: evidenceFallback(record.osVersion ?? fallback?.osVersion),
+        osBuild: evidenceFallback(record.osBuild ?? fallback?.osBuild),
+        domainOrWorkgroup: evidenceFallback(record.domainOrWorkgroup ?? fallback?.domainOrWorkgroup),
+        agentVersion: evidenceFallback(record.agentVersion ?? fallback?.agentVersion),
         status: mappedStatus,
-        lastSeenAt: new Date(record.lastSeenAt).toISOString(),
-        createdAt: record.createdAt ? new Date(record.createdAt).toISOString() : fallback?.createdAt ?? new Date().toISOString(),
-        hardware: candidate.hardware ?? fallback?.hardware ?? { cpuModel: 'Unknown', cpuCores: 0, cpuLogicalProcessors: 0, gpuModel: 'Unknown', ramTotalMb: 0, motherboardModel: 'Unknown', biosVersion: 'Unknown' },
+        lastSeenAt: normalizeEndpointTimestamp(record.lastSeenAt, fallback?.lastSeenAt ?? 'Unavailable'),
+        createdAt: normalizeEndpointTimestamp(record.createdAt, fallback?.createdAt ?? 'Unavailable'),
+        hardware: candidate.hardware ?? fallback?.hardware ?? { cpuModel: 'Unavailable', gpuModel: 'Unavailable', motherboardModel: 'Unavailable', biosVersion: 'Unavailable' },
         disks: candidate.disks ?? fallback?.disks ?? [],
-        osHealth: candidate.osHealth ?? fallback?.osHealth ?? { osVersion: record.osVersion ?? 'Unknown', osBuild: record.osBuild ?? 'Unknown', dismStatus: 'Unavailable', sfcStatus: 'Unavailable', driverIssuesCount: 0 },
+        osHealth: candidate.osHealth ?? fallback?.osHealth ?? { osVersion: evidenceFallback(record.osVersion), osBuild: evidenceFallback(record.osBuild), dismStatus: 'Unavailable', sfcStatus: 'Unavailable' },
         software: candidate.software ?? fallback?.software ?? [],
         processes: candidate.processes ?? fallback?.processes ?? [],
         eventLogs: candidate.eventLogs ?? fallback?.eventLogs ?? [],

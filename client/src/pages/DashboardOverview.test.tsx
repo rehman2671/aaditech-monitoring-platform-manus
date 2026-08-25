@@ -57,7 +57,8 @@ describe('DashboardOverview evidence labels', () => {
     );
 
     expect(screen.getByText('DIAGNOSTIC LIMITATIONS PRESENT')).toBeTruthy();
-    expect(screen.getByText(`Latest evidence: ${new Date('2026-08-25T08:05:00.000Z').toLocaleString()}`)).toBeTruthy();
+    expect(screen.getByText(`Latest capture: ${new Date('2026-08-25T08:05:00.000Z').toLocaleString()}`)).toBeTruthy();
+    expect(screen.getByText(`Last successful: Unavailable`)).toBeTruthy();
     expect(screen.getByText(/1 collector evidence records/)).toBeTruthy();
   });
 
@@ -65,7 +66,10 @@ describe('DashboardOverview evidence labels', () => {
     render(
       <Router>
         <DashboardOverview
-          endpoints={[endpoint({ collectorEvidence: [{ collector: 'performance', status: 'success', capturedAt: '2026-08-25T08:05:00.000Z' }] })]}
+          endpoints={[endpoint({ collectorEvidence: [
+            { collector: 'performance', status: 'success', capturedAt: '2026-08-25T08:05:00.000Z' },
+            { collector: 'drivers', status: 'success', capturedAt: '2026-08-25T08:06:00.000Z' },
+          ] })]}
           alerts={[]}
           onAcknowledgeAlert={vi.fn()}
         />
@@ -73,6 +77,8 @@ describe('DashboardOverview evidence labels', () => {
     );
 
     expect(screen.getByText('TELEMETRY STATUS OBSERVED')).toBeTruthy();
+    expect(screen.getByText(`Last successful: ${new Date('2026-08-25T08:06:00.000Z').toLocaleString()}`)).toBeTruthy();
+    expect(screen.getByText(`Performance: ${new Date('2026-08-25T08:05:00.000Z').toLocaleString()} · Diagnostics: ${new Date('2026-08-25T08:06:00.000Z').toLocaleString()}`)).toBeTruthy();
     expect(screen.queryByText('COLLECTOR EVIDENCE NOT SUPPLIED')).toBeNull();
   });
 
@@ -93,6 +99,25 @@ describe('DashboardOverview evidence labels', () => {
     expect(screen.getByText('No performance telemetry evidence received.')).toBeTruthy();
   });
 
+  it('renders missing hardware evidence as unavailable rather than zero', () => {
+    render(
+      <Router>
+        <DashboardOverview
+          endpoints={[endpoint({
+            hardware: { cpuModel: 'Unavailable', gpuModel: 'Unavailable', motherboardModel: 'Unavailable', biosVersion: 'Unavailable' },
+            osHealth: { osVersion: 'Windows 11', osBuild: '26200', dismStatus: 'Unavailable', sfcStatus: 'Unavailable' },
+            disks: [], software: [], processes: [], eventLogs: [], metricsHistory: [],
+          })]}
+          alerts={[]}
+          onAcknowledgeAlert={vi.fn()}
+        />
+      </Router>,
+    );
+    expect(screen.getByText(/cores unavailable/)).toBeTruthy();
+    expect(screen.getByText(/RAM unavailable/)).toBeTruthy();
+    expect(screen.queryByText(/0 GB/)).toBeNull();
+  });
+
   it('does not claim nominal collectors when no evidence is supplied', () => {
     render(
       <Router>
@@ -101,7 +126,8 @@ describe('DashboardOverview evidence labels', () => {
     );
 
     expect(screen.getByText('COLLECTOR EVIDENCE NOT SUPPLIED')).toBeTruthy();
-    expect(screen.getByText(/Latest evidence: No timestamp supplied/)).toBeTruthy();
+    expect(screen.getByText(/Latest capture: No timestamp supplied/)).toBeTruthy();
+    expect(screen.getByText('Last successful: Unavailable')).toBeTruthy();
     expect(screen.queryByText('ALL WMI COLLECTORS NOMINAL')).toBeNull();
   });
 });

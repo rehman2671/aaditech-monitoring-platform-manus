@@ -52,9 +52,9 @@ export default function DashboardOverview({ endpoints, alerts, onAcknowledgeAler
   const offlineCount = endpoints.filter(e => e.status === 'offline').length;
   const totalCount = endpoints.length;
   const evidenceSummary = summarizeDashboardEvidence(endpoints);
-  const { records: explicitEvidence, hasExplicitEvidence, limitationCount: evidenceWithLimitations, latestCapturedAt: latestEvidenceAt } = evidenceSummary;
+  const { records: explicitEvidence, hasExplicitEvidence, limitationCount: evidenceWithLimitations, latestCapturedAt: latestEvidenceAt, latestSuccessfulCapturedAt, latestByCollector } = evidenceSummary;
   const endpointsWithPerformanceEvidence = endpoints.filter(endpoint => endpoint.metricsHistory.length > 0).length;
-  const endpointsWithDiagnosticLimitations = endpoints.filter(endpoint => endpoint.osHealth.sfcStatus !== 'No Integrity Violations' || endpoint.osHealth.driverIssuesCount > 0 || endpoint.disks.some(disk => disk.smartHealth === 'Unknown')).length;
+  const endpointsWithDiagnosticLimitations = endpoints.filter(endpoint => endpoint.osHealth.sfcStatus !== 'No Integrity Violations' || (typeof endpoint.osHealth.driverIssuesCount === 'number' && endpoint.osHealth.driverIssuesCount > 0) || endpoint.disks.some(disk => disk.smartHealth === 'Unknown')).length;
   const evidenceFreshness = latestEvidenceAt ? new Date(latestEvidenceAt).toLocaleString() : 'No timestamp supplied';
 
   const unacknowledgedAlerts = alerts.filter(a => !a.acknowledged);
@@ -74,7 +74,11 @@ export default function DashboardOverview({ endpoints, alerts, onAcknowledgeAler
             <span className={`w-2 h-2 rounded-full ${!hasExplicitEvidence || endpointsWithDiagnosticLimitations || evidenceWithLimitations ? 'bg-amber-400' : 'bg-blue-400'}`}></span>
             {!hasExplicitEvidence ? 'COLLECTOR EVIDENCE NOT SUPPLIED' : endpointsWithDiagnosticLimitations || evidenceWithLimitations ? 'DIAGNOSTIC LIMITATIONS PRESENT' : 'TELEMETRY STATUS OBSERVED'}
           </span>
-          <span className="text-[10px] text-slate-500 font-mono">Latest evidence: {evidenceFreshness}</span>
+          <div className="text-[10px] text-slate-500 font-mono text-right">
+            <div>Latest capture: {evidenceFreshness}</div>
+            <div>Last successful: {latestSuccessfulCapturedAt ? new Date(latestSuccessfulCapturedAt).toLocaleString() : 'Unavailable'}</div>
+            <div>Performance: {latestByCollector.performance ? new Date(latestByCollector.performance).toLocaleString() : 'Unavailable'} · Diagnostics: {latestByCollector.diagnostics ? new Date(latestByCollector.diagnostics).toLocaleString() : 'Unavailable'}</div>
+          </div>
         </div>
       </div>
 
@@ -287,7 +291,7 @@ export default function DashboardOverview({ endpoints, alerts, onAcknowledgeAler
                     {ep.osVersion} <span className="text-slate-500 font-mono text-[10px]">({ep.osBuild})</span>
                   </td>
                   <td className="py-3.5 px-4 text-slate-300 font-mono">
-                    {ep.hardware.cpuModel.split(' ')[0]} ({ep.hardware.cpuCores}C) • {Math.round(ep.hardware.ramTotalMb / 1024)} GB
+                    {ep.hardware.cpuModel.split(' ')[0]} ({typeof ep.hardware.cpuCores === 'number' ? `${ep.hardware.cpuCores}C` : 'cores unavailable'}) • {typeof ep.hardware.ramTotalMb === 'number' ? `${Math.round(ep.hardware.ramTotalMb / 1024)} GB` : 'RAM unavailable'}
                   </td>
                   <td className="py-3.5 px-4 text-slate-400 font-mono">
                     {new Date(ep.lastSeenAt).toLocaleTimeString()}

@@ -107,10 +107,10 @@ export interface GraphicsAdapterInfo {
 
 export interface HardwareInfo {
   cpuModel: string;
-  cpuCores: number;
-  cpuLogicalProcessors: number;
+  cpuCores?: number;
+  cpuLogicalProcessors?: number;
   gpuModel: string;
-  ramTotalMb: number;
+  ramTotalMb?: number;
   motherboardModel: string;
   biosVersion: string;
   serialNumber?: string;
@@ -125,7 +125,7 @@ export interface OsHealthInfo {
   osBuild: string;
   dismStatus: 'Healthy' | 'Repairable' | 'Corrupt' | 'Unavailable';
   sfcStatus: 'No Integrity Violations' | 'Corrupt Files Repaired' | 'Unresolved Issues' | 'Unavailable';
-  driverIssuesCount: number;
+  driverIssuesCount?: number;
   reliabilityScore?: number; // out of 10; absent when not collected
   checkedAt?: string;
   sfcDetail?: string;

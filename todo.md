@@ -47,7 +47,7 @@
 - [ ] Repair and verify JSON/CSV/PDF exports and live-stream freshness/reconnect behavior.
 - [ ] Run end-to-end regression acceptance tests and publish only verified changes.
 
-- [ ] Add dashboard-level collector freshness timestamps for telemetry, diagnostics, and last successful evidence capture.
+- [x] Add dashboard-level collector freshness timestamps for telemetry, diagnostics, and last successful evidence capture.
 - [ ] Replace dashboard status derivation with explicit backend evidence fields rather than only inferred local fields.
 - [x] Add tests covering timestamped dashboard degraded/limited states and truthful label rendering.
 
@@ -144,3 +144,53 @@
 - [x] Add DashboardOverview regression coverage for the no-performance-evidence empty state and fleet-average chart semantics.
 
 - [x] Add an additive tenant-scoped endpoint metadata audit table and record actor, endpoint, changed fields, and timestamp on every admin metadata mutation.
+
+- [x] Use the existing WMI process-owner lookup in process diagnostics and report unavailable when Windows denies access instead of always emitting Unknown.
+
+- [x] Compute a true last-successful evidence timestamp separately from latest capture and add success-versus-limitation regression coverage.
+- [x] Normalize diagnostics collector evidence into a real dashboard diagnostics freshness key and test that it renders from supplied evidence.
+
+- [x] Remove frontend normalization fallbacks that fabricate endpoint timestamps or status evidence; preserve explicit backend values and use unavailable labels for missing fields.
+
+- [x] Audit every endpoint normalization fallback and distinguish evidence-safe unavailable labels from real backend values.
+- [x] Add normalization tests for missing timestamps/identity fields and pending, disabled, online, warning, and offline statuses.
+- [x] Document contract-safe normalization behavior so future endpoint mapping cannot reintroduce fabricated evidence.
+
+- [x] Audit remaining hardware, OS-health, array, and unknown-value endpoint defaults; ensure they are explicit unavailable states rather than fabricated evidence.
+- [x] Add regression assertions for missing hardware and OS-health payloads so numeric values are never presented as observed.
+- [x] Expand the endpoint normalization contract documentation to cover status mapping, timestamps, identity, hardware, OS health, arrays, and unavailable placeholders.
+
+- [x] Add DashboardOverview and endpoint-detail regression tests proving missing hardware and OS-health payloads render unavailable rather than zero or healthy evidence.
+- [x] Add regression coverage for empty disk, software, process, and event collections so no fabricated rows appear.
+
+- [x] Fix EndpointDetail JSX runtime import so the new unavailable-evidence regression renders under the configured React transform.
+
+- [x] Fix ExtendedTelemetryPanel JSX runtime import so EndpointDetail unavailable-evidence rendering can complete under Vitest.
+
+- [x] Add an isolated ResizeObserver stub to the EndpointDetail jsdom test so Recharts does not obscure the evidence assertions.
+
+- [ ] Extend the Windows agent telemetry payload with truthful WMI-backed RAM module speed/slot/form-factor and per-adapter GPU dedicated/shared-memory evidence.
+
+- [x] Extend the Windows agent telemetry payload with truthful WMI-backed RAM module speed/slot/form-factor and per-adapter GPU dedicated/shared-memory evidence; bound Release build passes with zero warnings/errors.
+
+- [ ] Reconcile the local Windows service artifact with the current agent build; prove the installed executable version and MSI version match before claiming local deployment validation.
+
+- [ ] Set the Windows agent assembly/file/product version from the same release version used by MSI generation and add a parity check so installed executable metadata cannot remain 1.0.0.
+
+- [x] Wire AgentSemVer into .NET publish metadata and verify a bound Windows publish produces FileVersion/ProductVersion 2.4.18.0/2.4.18 instead of 1.0.0.
+
+- [x] Build and verify MSI 2.4.19 with preserved enrollment configuration; manifest SHA-256 equals the actual artifact hash and expected unsigned-test Authenticode status is NotSigned.
+
+- [x] Install MSI 2.4.19 on the bound Windows machine; service is Running/Automatic, executable metadata is FileVersion 2.4.19.0 and ProductVersion 2.4.19, and MSI event 11707 confirms successful installation.
+- [x] Complete post-install telemetry evidence: replay-enabled MSI 2.4.20 is installed with FileVersion/ProductVersion 2.4.20.0/2.4.20, service is Running/Automatic, encrypted credential file is present, and PostgreSQL metrics increased from 5928 to 5950 during a 45-second polling window.
+
+## Migration completion execution — 2026-08-25
+
+- [ ] Trace the installed Windows agent enrollment and telemetry request path against the running backend, including actual response codes and observed offline-buffer behavior.
+- [ ] Add or repair agent-visible structured diagnostics for enrollment, collection, queueing, and telemetry delivery without recording secrets, then verify those diagnostics from the running installed build.
+- [ ] Verify real WMI RAM/GPU/battery/network evidence from a clean collection cycle reaches tenant-scoped database rows and dashboard fields; the newest accepted payload now includes non-null CPU/RAM/disk values plus memory_modules, graphics_adapters, and diagnostics keys, but dashboard and battery/network field verification remain open.
+- [ ] Complete remaining diagnostic freshness and evidence-safe UI gaps for SFC, SMART, drivers, processes, software, and event records.
+- [ ] Verify live JSON/CSV/PDF exports and telemetry freshness/reconnect behavior against authenticated tenant data.
+- [ ] Resolve or explicitly document the Windows NuGet ConfigurationDefaults restore blocker and execute the available Windows unit tests.
+- [ ] Validate clean-profile MSI generation, version/hash parity, enrollment configuration, and production signing gate.
+- [ ] Run final frontend, backend, packaging, and end-to-end acceptance tests; update the migration decision only from observed evidence.

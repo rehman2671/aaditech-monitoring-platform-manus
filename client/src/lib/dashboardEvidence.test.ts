@@ -8,6 +8,7 @@ describe('summarizeDashboardEvidence', () => {
       hasExplicitEvidence: false,
       limitationCount: 0,
       latestCapturedAt: undefined,
+      latestByCollector: {},
     });
   });
 
@@ -29,6 +30,11 @@ describe('summarizeDashboardEvidence', () => {
     expect(result.hasExplicitEvidence).toBe(true);
     expect(result.limitationCount).toBe(2);
     expect(result.latestCapturedAt).toBe('2026-08-25T08:05:00.000Z');
+    expect(result.latestByCollector).toEqual({
+      performance: '2026-08-25T08:00:00.000Z',
+      drivers: '2026-08-25T08:05:00.000Z',
+      battery: '2026-08-25T08:03:00.000Z',
+    });
     expect(result.records).toHaveLength(3);
   });
 });

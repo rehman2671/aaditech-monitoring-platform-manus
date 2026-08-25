@@ -1,3 +1,4 @@
+import React from 'react';
 import type { Endpoint, BatteryInfo, NetworkAdapterInfo, ExtendedHardwareInfo, ExtendedDiskInfo } from '@/types';
 import { BatteryCharging, Cpu, Gauge, HardDrive, MemoryStick, Network, Plug, Thermometer } from 'lucide-react';
 
