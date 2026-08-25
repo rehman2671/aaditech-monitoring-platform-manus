@@ -1,7 +1,7 @@
 # SentinelPulse Honest Implementation Roadmap
 
 ## 1. Acceptance Criteria & Preflight Validation
-- [ ] Define explicit, testable acceptance criteria for universal MSI packaging, dynamic config, two-phase enrollment, and WMI telemetry streaming.
+- [x] Define explicit, testable acceptance criteria for universal MSI packaging, dynamic config, two-phase enrollment, and WMI telemetry streaming.
 - [x] Add preflight validation script for backend, database, and local runner health.
 
 ## 2. Configuration & Enrollment Precedence Fixes

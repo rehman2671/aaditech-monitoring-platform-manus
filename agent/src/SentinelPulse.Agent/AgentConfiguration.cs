@@ -21,11 +21,11 @@ internal static class AgentConfiguration
         PropertyNameCaseInsensitive = true,
     };
 
-    public static string? Get(string environmentName)
+    public static string? Get(string environmentName, string? configPathOverride = null)
     {
         // The ProgramData JSON file is authoritative so server re-pointing does not
         // require a rebuild and cannot be silently overridden by stale registry data.
-        var jsonValue = ReadJsonValue(environmentName);
+        var jsonValue = ReadJsonValue(environmentName, configPathOverride);
         if (!string.IsNullOrWhiteSpace(jsonValue))
         {
             return jsonValue.Trim();
@@ -61,7 +61,7 @@ internal static class AgentConfiguration
         }
     }
 
-    private static string? ReadJsonValue(string environmentName)
+    private static string? ReadJsonValue(string environmentName, string? configPathOverride = null)
     {
         var jsonKey = environmentName switch
         {
@@ -70,14 +70,15 @@ internal static class AgentConfiguration
             "SENTINELPULSE_ENROLLMENT_TOKEN" => "enrollmentToken",
             _ => null
         };
-        if (jsonKey is null || !File.Exists(ConfigFilePath))
+        var configFilePath = string.IsNullOrWhiteSpace(configPathOverride) ? ConfigFilePath : configPathOverride;
+        if (jsonKey is null || !File.Exists(configFilePath))
         {
             return null;
         }
 
         try
         {
-            using var doc = JsonDocument.Parse(File.ReadAllText(ConfigFilePath));
+            using var doc = JsonDocument.Parse(File.ReadAllText(configFilePath));
             if (doc.RootElement.ValueKind != JsonValueKind.Object)
             {
                 return null;
@@ -107,7 +108,7 @@ internal static class AgentConfiguration
         return null;
     }
 
-    public static void ClearEnrollmentToken()
+    public static void ClearEnrollmentToken(string? configPathOverride = null)
     {
         try
         {
@@ -128,12 +129,13 @@ internal static class AgentConfiguration
 
         try
         {
-            if (!File.Exists(ConfigFilePath))
+            var configFilePath = string.IsNullOrWhiteSpace(configPathOverride) ? ConfigFilePath : configPathOverride;
+            if (!File.Exists(configFilePath))
             {
                 return;
             }
 
-            var root = JsonNode.Parse(File.ReadAllText(ConfigFilePath)) as JsonObject;
+            var root = JsonNode.Parse(File.ReadAllText(configFilePath)) as JsonObject;
             if (root is null)
             {
                 return;
@@ -147,7 +149,7 @@ internal static class AgentConfiguration
                 }
             }
 
-            File.WriteAllText(ConfigFilePath, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+            File.WriteAllText(configFilePath, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
         }
         catch (JsonException)
         {
