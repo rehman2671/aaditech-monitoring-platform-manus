@@ -54,6 +54,9 @@
 
     <Property Id="ARPNOREPAIR" Value="no" />
     <Property Id="ARPNOMODIFY" Value="no" />
+    <Property Id="API_BASE_URL" Secure="yes" />
+    <Property Id="ENDPOINT_ID" Secure="yes" />
+    <Property Id="ENROLLMENT_TOKEN" Secure="yes" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="SentinelPulse">
@@ -123,19 +126,19 @@
           Key="Software\SentinelPulse\Agent"
           Name="BootstrapApiBaseUrl"
           Type="string"
-          Value="$(var.BootstrapApiBaseUrl)" />
+          Value="[API_BASE_URL]" />
       <RegistryValue
           Root="HKLM"
           Key="Software\SentinelPulse\Agent"
           Name="BootstrapEndpointId"
           Type="string"
-          Value="$(var.BootstrapEndpointId)" />
+          Value="[ENDPOINT_ID]" />
       <RegistryValue
           Root="HKLM"
           Key="Software\SentinelPulse\Agent"
           Name="BootstrapEnrollmentToken"
           Type="string"
-          Value="$(var.BootstrapEnrollmentToken)" />
+          Value="[ENROLLMENT_TOKEN]" />
     </Component>
   </Fragment>
 

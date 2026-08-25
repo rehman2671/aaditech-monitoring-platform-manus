@@ -23,6 +23,9 @@ namespace SentinelPulse.Agent
 
         [JsonPropertyName("captured_at")]
         public long CapturedAt { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        [JsonPropertyName("diagnostics")]
+        public DiagnosticsSnapshot? Diagnostics { get; set; }
     }
 
     public class WmiCollectors

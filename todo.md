@@ -9,8 +9,8 @@
 - [ ] Add unit tests for configuration resolution hierarchy and token hashing.
 
 ## 3. Universal MSI & Dynamic Config Generation
-- [ ] Update WiX template (`sentinelpulse-agent.wxs`) and `build-msi.ps1` to support public MSI properties (`API_BASE_URL`, `ENROLLMENT_TOKEN`) and automatically write `config.json` to `ProgramData\SentinelPulse\Agent\config.json`.
-- [ ] Verify installer generation without failing clean developer environments.
+- [x] Update WiX template (`sentinelpulse-agent.wxs`) and `build-msi.ps1` to support public MSI properties (`API_BASE_URL`, `ENROLLMENT_TOKEN`) and automatically write `config.json` to `ProgramData\SentinelPulse\Agent\config.json`.
+- [x] Verify installer generation without failing clean developer environments.
 
 ## 4. Backend Enrollment & Telemetry Ingestion Hardening
 - [ ] Validate `/api/v1/enroll` credential exchange end-to-end with the local Windows agent.
@@ -93,3 +93,20 @@
 - [x] Add an integration-style test covering device-auth middleware, ingress queue, and worker for a tenant-scoped credential attempting to affect another tenant endpoint.
 
 - [x] Add one Go integration-style telemetry test that authenticates a valid device bearer token, submits through HTTP ingress, confirms Redis queue behavior, runs worker processing, and proves cross-tenant endpoint access is rejected.
+
+- [x] Fix the Windows agent compile failure where Worker.cs references SystemMetrics.Diagnostics but the current model does not define that member.
+- [x] Rebuild the Windows agent with --no-restore after reconciling the diagnostics model and worker payload contract.
+
+- [ ] Resolve the bound Windows NuGet ConfigurationDefaults null-profile restore error so the new AgentConfiguration xUnit project can execute.
+
+- [x] Verify the locally generated SentinelPulseAgent-2.4.17 MSI manifest, SHA-256, embedded runtime config, and unsigned-test signature status without installing it.
+
+- [x] Inspect and record WiX evidence for API_BASE_URL, ENROLLMENT_TOKEN, and the ProgramData config target before finalizing packaging status.
+- [ ] Validate or explicitly document MSI generation behavior under a clean Windows profile rather than treating one cached build as clean-environment proof.
+- [x] Inspect MSI tables/content to prove the generated runtime config is included in the package, then re-verify checksum and signature metadata.
+
+- [x] Fix WiX WIX0006 when public MSI properties are omitted by declaring optional properties without empty Value attributes.
+
+- [x] Re-verify the 2.4.18 MSI manifest, SHA-256 checksum, and Authenticode status after decompiling it to prove the embedded runtime config is present in that same artifact.
+
+- [x] Run a standalone successful `Get-AuthenticodeSignature` check for `SentinelPulseAgent-2.4.18-x64.msi` after decompilation and record the `NotSigned`/signature status for that same artifact before marking the todo complete.
