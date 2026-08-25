@@ -77,10 +77,10 @@ export async function runPreflight(options, dependencies = {}) {
   }
 
   const checks = [];
-  const health = await checkHttpFn(`${apiBaseUrl}/healthz`, options.timeoutMs);
-  checks.push({ name: 'backend_healthz', ok: health.ok, detail: `${health.status || 'unreachable'} ${health.body}` });
-  const readiness = await checkHttpFn(`${apiBaseUrl}/readyz`, options.timeoutMs);
-  checks.push({ name: 'backend_readyz', ok: readiness.ok, detail: `${readiness.status || 'unreachable'} ${readiness.body}` });
+  const health = await checkHttpFn(`${apiBaseUrl}/health/live`, options.timeoutMs);
+  checks.push({ name: 'backend_health_live', ok: health.ok, detail: `${health.status || 'unreachable'} ${health.body}` });
+  const readiness = await checkHttpFn(`${apiBaseUrl}/health/ready`, options.timeoutMs);
+  checks.push({ name: 'backend_health_ready', ok: readiness.ok, detail: `${readiness.status || 'unreachable'} ${readiness.body}` });
 
   const isLoopback = parsedUrl.hostname === '127.0.0.1' || parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '::1';
   checks.push({ name: 'api_binding', ok: Boolean(parsedUrl.port), detail: `${parsedUrl.protocol}//${parsedUrl.hostname}:${parsedUrl.port || '(default)'}` });

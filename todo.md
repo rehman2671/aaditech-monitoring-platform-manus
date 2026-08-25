@@ -69,3 +69,5 @@
 - [x] Add frontend API tests proving null or object endpoint responses fail with a descriptive payload error instead of crashing on map.
 
 - [x] Assert the descriptive INVALID_API_PAYLOAD error message text for both null and object endpoint responses.
+
+- [x] Align preflight health probes with the canonical Go routes /health/live and /health/ready, and assert the exact paths in regression tests.

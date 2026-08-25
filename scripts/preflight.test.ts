@@ -17,23 +17,29 @@ describe('runPreflight', () => {
 
     expect(result.ok).toBe(true);
     expect(result.checks.map(check => check.name)).toEqual([
-      'backend_healthz', 'backend_readyz', 'api_binding', 'database_connectivity', 'msi_runner_health', 'loopback_warning',
+      'backend_health_live', 'backend_health_ready', 'api_binding', 'database_connectivity', 'msi_runner_health', 'loopback_warning',
     ]);
   });
 
   it('fails when a backend or database probe fails', async () => {
+    const requestedUrls: string[] = [];
     const result = await runPreflight({
       apiBaseUrl: 'http://monitoring-gateway:8080',
       runnerStatusUrl: 'http://builder:9090/healthz',
       databaseUrl: 'postgres://user:pass@postgres:5432/sentinelpulse',
       timeoutMs: 100,
     }, {
-      checkHttp: async url => ({ ok: !url.endsWith('/readyz'), status: url.endsWith('/readyz') ? 503 : 200, body: 'failure' }),
+      checkHttp: async url => {
+        requestedUrls.push(url);
+        const isReady = url.endsWith('/health/ready');
+        return { ok: !isReady, status: isReady ? 503 : 200, body: 'failure' };
+      },
       checkDatabase: async () => ({ ok: false, detail: 'connection refused' }),
     });
 
     expect(result.ok).toBe(false);
-    expect(result.checks.find(check => check.name === 'backend_readyz')?.ok).toBe(false);
+    expect(requestedUrls.slice(0, 2)).toEqual(['http://monitoring-gateway:8080/health/live', 'http://monitoring-gateway:8080/health/ready']);
+    expect(result.checks.find(check => check.name === 'backend_health_ready')?.ok).toBe(false);
     expect(result.checks.find(check => check.name === 'database_connectivity')?.ok).toBe(false);
   });
 
