@@ -3,7 +3,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { Router } from 'wouter';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import DashboardOverview from './DashboardOverview';
+import DashboardOverview, { buildFleetTrendData } from './DashboardOverview';
 import type { Endpoint } from '@/types';
 
 class ResizeObserverStub {
@@ -74,6 +74,23 @@ describe('DashboardOverview evidence labels', () => {
 
     expect(screen.getByText('TELEMETRY STATUS OBSERVED')).toBeTruthy();
     expect(screen.queryByText('COLLECTOR EVIDENCE NOT SUPPLIED')).toBeNull();
+  });
+
+  it('computes fleet CPU and RAM averages per real timestamp bucket', () => {
+    const result = buildFleetTrendData([
+      endpoint({ metricsHistory: [{ timestamp: '2026-08-25T08:00:00.000Z', cpu: 20, ram: 40, diskIO: 0 }] }),
+      endpoint({ id: 'endpoint-2', metricsHistory: [{ timestamp: '2026-08-25T08:00:00.000Z', cpu: 40, ram: 60, diskIO: 0 }] }),
+    ]);
+    expect(result).toEqual([{ time: '2026-08-25T08:00:00.000Z', cpuAvg: 30, ramAvg: 50 }]);
+  });
+
+  it('shows a no-evidence state when no performance samples exist', () => {
+    render(
+      <Router>
+        <DashboardOverview endpoints={[endpoint()]} alerts={[]} onAcknowledgeAlert={vi.fn()} />
+      </Router>,
+    );
+    expect(screen.getByText('No performance telemetry evidence received.')).toBeTruthy();
   });
 
   it('does not claim nominal collectors when no evidence is supplied', () => {

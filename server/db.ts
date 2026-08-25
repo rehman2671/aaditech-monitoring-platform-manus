@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, sql, or, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import crypto from "crypto";
 import { InsertUser, users, departmentCatalog, locationCatalog } from "../drizzle/schema";
@@ -171,7 +171,11 @@ export async function getAlertRules(orgId = 'org-enterprise-01') {
 export async function getSystemAlerts(orgId = 'org-enterprise-01') {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(systemAlerts).where(eq(systemAlerts.organizationId, orgId));
+  const rows = await db.select({ alert: systemAlerts, maintenanceMode: endpointMetadata.maintenanceMode })
+    .from(systemAlerts)
+    .leftJoin(endpointMetadata, eq(systemAlerts.endpointId, endpointMetadata.endpointId))
+    .where(and(eq(systemAlerts.organizationId, orgId), or(isNull(endpointMetadata.maintenanceMode), eq(endpointMetadata.maintenanceMode, false))));
+  return rows.map(row => row.alert);
 }
 
 export async function getEnrollmentTokens(orgId = 'org-enterprise-01') {
@@ -180,16 +184,16 @@ export async function getEnrollmentTokens(orgId = 'org-enterprise-01') {
   return db.select().from(enrollmentTokens).where(eq(enrollmentTokens.organizationId, orgId));
 }
 
-export async function acknowledgeSystemAlert(alertId: string) {
+export async function acknowledgeSystemAlert(alertId: string, orgId = 'org-enterprise-01') {
   const db = await getDb();
   if (!db) throw new Error('Database unavailable');
-  await db.update(systemAlerts).set({ acknowledged: true }).where(eq(systemAlerts.id, alertId));
+  await db.update(systemAlerts).set({ acknowledged: true }).where(and(eq(systemAlerts.id, alertId), eq(systemAlerts.organizationId, orgId)));
 }
 
-export async function setAlertRuleEnabled(ruleId: string, enabled: boolean) {
+export async function setAlertRuleEnabled(ruleId: string, enabled: boolean, orgId = 'org-enterprise-01') {
   const db = await getDb();
   if (!db) throw new Error('Database unavailable');
-  await db.update(alertRules).set({ enabled }).where(eq(alertRules.id, ruleId));
+  await db.update(alertRules).set({ enabled }).where(and(eq(alertRules.id, ruleId), eq(alertRules.organizationId, orgId)));
 }
 
 export async function recordEndpointHeartbeat(endpointId: string) {

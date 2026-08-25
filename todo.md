@@ -5,7 +5,7 @@
 - [x] Add preflight validation script for backend, database, and local runner health.
 
 ## 2. Configuration & Enrollment Precedence Fixes
-- [ ] Align `AgentConfiguration.cs` precedence with design: authoritative JSON `config.json` -> Environment Variables -> Registry fallback.
+- [x] Align `AgentConfiguration.cs` precedence with design: authoritative JSON `config.json` -> Environment Variables -> Registry fallback.
 - [ ] Add unit tests for configuration resolution hierarchy and token hashing.
 
 ## 3. Universal MSI & Dynamic Config Generation
@@ -72,18 +72,18 @@
 
 - [x] Align preflight health probes with the canonical Go routes /health/live and /health/ready, and assert the exact paths in regression tests.
 
-- [ ] Remove synthetic CPU/RAM/disk values and hardcoded org-tenant-default attribution from telemetry persistence.
-- [ ] Propagate authenticated endpoint tenant identity through Redis telemetry messages and enforce endpoint/token tenant isolation.
-- [ ] Add backend tests proving unauthenticated, revoked, mismatched-endpoint, and cross-tenant telemetry writes are rejected.
+- [x] Remove synthetic CPU/RAM/disk values and hardcoded org-tenant-default attribution from telemetry persistence.
+- [x] Propagate authenticated endpoint tenant identity through Redis telemetry messages and enforce endpoint/token tenant isolation.
+- [x] Add backend tests proving unauthenticated, revoked, mismatched-endpoint, and cross-tenant telemetry writes are rejected.
 
 ## Approved truthful telemetry and tenant isolation — 2026-08-25
 
-- [ ] Add a non-destructive migration making persisted metric columns nullable so unavailable WMI evidence is stored as NULL rather than fabricated values.
+- [x] Add a non-destructive migration making persisted metric columns nullable so unavailable WMI evidence is stored as NULL rather than fabricated values.
 - [x] Propagate authenticated tenant identity through the telemetry envelope and Redis stream.
 - [x] Require valid device bearer credentials for telemetry ingestion and reject revoked or unknown credentials.
 - [x] Reject telemetry when the envelope endpoint ID does not match the authenticated device credential.
 - [x] Persist real CPU, RAM, and disk values from the telemetry payload, preserving missing values as NULL.
-- [ ] Remove fabricated CPU, RAM, disk, and temperature fallbacks from the Windows agent collector.
+- [x] Remove fabricated CPU, RAM, disk, and temperature fallbacks from the Windows agent collector.
 - [x] Add backend tests for telemetry authentication, endpoint matching, tenant isolation, and real metric persistence.
 - [x] Run full frontend, Go backend, and available Windows-agent validation; document any unavailable platform-specific validation.
 
@@ -129,3 +129,16 @@
 - [x] Add endpoint-detail Department and Location dropdowns plus admin-gated owner, immutable Asset ID, tags, and maintenance-mode metadata controls backed by the tenant-scoped mutation.
 
 - [x] Make Asset ID server-generated on first metadata write and immutable thereafter; ignore client-supplied asset IDs and add regression coverage.
+
+- [x] Render optional RAM physical slot occupancy in the dashboard and retain explicit unavailable labels when the agent does not provide slot evidence.
+
+- [x] Suppress listed system alerts for endpoints in maintenance mode and scope alert acknowledgement and rule enablement updates to the authenticated organization.
+
+- [x] Replace the fleet JSON export placeholder with a real client download of the currently authenticated, tenant-scoped endpoint payload.
+
+- [x] Remove the report export N-plus-one telemetry query path and use one tenant-scoped enriched endpoint read so CSV/PDF generation does not appear to hang on larger fleets.
+
+- [x] Remove synthetic T-minus timestamps and zero-valued CPU/RAM trend points; show an explicit no-evidence state when no performance samples exist.
+
+- [x] Compute true fleet-wide CPU/RAM averages per real timestamp bucket and keep chart labels aligned with that aggregation.
+- [x] Add DashboardOverview regression coverage for the no-performance-evidence empty state and fleet-average chart semantics.

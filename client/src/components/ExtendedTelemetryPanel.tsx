@@ -54,6 +54,7 @@ export default function ExtendedTelemetryPanel({ endpoint }: { endpoint: Extende
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <section className="bg-slate-900 border border-slate-800 rounded-xl p-5">
           <h4 className="text-sm font-bold text-white flex items-center gap-2"><MemoryStick className="w-4 h-4 text-cyan-400" /> RAM Modules</h4>
+          <p className="mt-2 text-xs font-mono text-slate-400">Slots: {typeof hardware?.memorySlotsUsed === 'number' && typeof hardware?.memorySlotsTotal === 'number' ? `${hardware.memorySlotsUsed} / ${hardware.memorySlotsTotal} occupied` : 'Unavailable'}</p>
           {memoryModules.length ? (
             <div className="mt-4 space-y-2 text-xs font-mono text-slate-300">
               {memoryModules.map((module, index) => <div key={module.id || `memory-${index}`} className="border-b border-slate-800 pb-2 last:border-0"><p className="text-white">Module {index + 1}: {formatMb(module.capacityMb)}</p><p>Speed: {module.speedMtps ? `${module.speedMtps} MT/s` : 'Unavailable'} · Form: {module.formFactor ?? 'Unknown'}</p></div>)}

@@ -252,7 +252,27 @@ export default function App() {
   };
 
   const exportFleet = () => {
-    toast.info('Use CSV or PDF export from the authenticated report controls.');
+    if (!session) {
+      toast.error('Sign in is required before exporting fleet data.');
+      return;
+    }
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      organizationId: session.user.organizationId,
+      endpoints,
+      alertRules,
+      systemAlerts,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `sentinelpulse-fleet-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    toast.success('Fleet JSON export downloaded.');
   };
 
   const shell = useMemo(() => ({

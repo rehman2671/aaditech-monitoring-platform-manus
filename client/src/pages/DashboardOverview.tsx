@@ -26,6 +26,26 @@ interface DashboardOverviewProps {
   onAcknowledgeAlert: (alertId: string) => void;
 }
 
+export function buildFleetTrendData(endpoints: Endpoint[]) {
+  const buckets = new Map<string, { cpu: number[]; ram: number[] }>();
+  for (const endpoint of endpoints) {
+    for (const point of endpoint.metricsHistory) {
+      const bucket = buckets.get(point.timestamp) ?? { cpu: [], ram: [] };
+      if (Number.isFinite(point.cpu)) bucket.cpu.push(point.cpu);
+      if (Number.isFinite(point.ram)) bucket.ram.push(point.ram);
+      buckets.set(point.timestamp, bucket);
+    }
+  }
+  return Array.from(buckets.entries())
+    .sort(([left], [right]) => new Date(left).getTime() - new Date(right).getTime())
+    .slice(-12)
+    .map(([time, values]) => ({
+      time,
+      cpuAvg: values.cpu.length ? Math.round(values.cpu.reduce((sum: number, value: number) => sum + value, 0) / values.cpu.length * 10) / 10 : null,
+      ramAvg: values.ram.length ? Math.round(values.ram.reduce((sum: number, value: number) => sum + value, 0) / values.ram.length * 10) / 10 : null,
+    }));
+}
+
 export default function DashboardOverview({ endpoints, alerts, onAcknowledgeAlert }: DashboardOverviewProps) {
   const onlineCount = endpoints.filter(e => e.status === 'online').length;
   const warningCount = endpoints.filter(e => e.status === 'warning').length;
@@ -39,16 +59,7 @@ export default function DashboardOverview({ endpoints, alerts, onAcknowledgeAler
 
   const unacknowledgedAlerts = alerts.filter(a => !a.acknowledged);
 
-  const trendData = Array.from({ length: 12 }, (_, index) => {
-    const points = endpoints.flatMap(endpoint => endpoint.metricsHistory.slice(-12)[index] ? [endpoint.metricsHistory.slice(-12)[index]] : []);
-    const cpuAvg = points.length ? points.reduce((sum, point) => sum + point.cpu, 0) / points.length : 0;
-    const ramAvg = points.length ? points.reduce((sum, point) => sum + point.ram, 0) / points.length : 0;
-    return {
-      time: points[0]?.timestamp ?? `T-${11 - index}`,
-      cpuAvg: Math.round(cpuAvg * 10) / 10,
-      ramAvg: Math.round(ramAvg * 10) / 10,
-    };
-  });
+  const trendData = buildFleetTrendData(endpoints);
 
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
@@ -157,28 +168,20 @@ export default function DashboardOverview({ endpoints, alerts, onAcknowledgeAler
             </span>
           </div>
           <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            {trendData.length ? <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="cpuColor" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="ramColor" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                  </linearGradient>
+                  <linearGradient id="cpuColor" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.4}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0}/></linearGradient>
+                  <linearGradient id="ramColor" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4}/><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/></linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                 <XAxis dataKey="time" stroke="#64748b" textAnchor="end" fontSize={11} font-family="JetBrains Mono" />
                 <YAxis stroke="#64748b" fontSize={11} font-family="JetBrains Mono" domain={[0, 100]} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#020617', borderColor: '#334155', borderRadius: '12px', color: '#f8fafc', fontSize: '12px' }}
-                />
+                <Tooltip contentStyle={{ backgroundColor: '#020617', borderColor: '#334155', borderRadius: '12px', color: '#f8fafc', fontSize: '12px' }} />
                 <Area type="monotone" dataKey="cpuAvg" name="CPU Avg (%)" stroke="#2563eb" strokeWidth={2} fillOpacity={1} fill="url(#cpuColor)" />
                 <Area type="monotone" dataKey="ramAvg" name="RAM Avg (%)" stroke="#8b5cf6" strokeWidth={2} fillOpacity={1} fill="url(#ramColor)" />
               </AreaChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer> : <div className="h-full flex items-center justify-center text-xs font-mono text-slate-500">No performance telemetry evidence received.</div>}
           </div>
         </div>
 
@@ -195,7 +198,7 @@ export default function DashboardOverview({ endpoints, alerts, onAcknowledgeAler
               {unacknowledgedAlerts.length === 0 ? (
                 <div className="text-center py-10 text-slate-500 text-xs">
                   <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto mb-2 opacity-60" />
-                  No unresolved alerts. All endpoints healthy.
+                  No unresolved alerts were returned by the current tenant-scoped alert feed.
                 </div>
               ) : (
                 unacknowledgedAlerts.map(alert => (

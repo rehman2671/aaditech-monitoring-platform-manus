@@ -23,14 +23,14 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 
 async function getReportInputs(orgId: string) {
-  const endpoints = await getEndpoints(orgId);
+  const endpoints = await getEnrichedEndpoints(orgId);
   const alerts = await getSystemAlerts(orgId);
-  const telemetry = await Promise.all(endpoints.map(async endpoint => ({
+  const telemetry = endpoints.map(endpoint => ({
     endpointId: endpoint.id,
-    battery: await getLatestBatteryTelemetry(endpoint.id, orgId),
-    network: (await getLatestNetworkTelemetry(endpoint.id, orgId))[0],
-    applications: await getApplicationUsage(endpoint.id, orgId),
-  })));
+    battery: endpoint.battery,
+    network: endpoint.networkAdapters?.[0],
+    applications: endpoint.applicationUsage,
+  }));
   return { endpoints, alerts, telemetry };
 }
 
@@ -120,12 +120,12 @@ export const appRouter = router({
     }),
     acknowledgeAlert: protectedProcedure.input(z.object({ alertId: z.string().min(1) })).mutation(async ({ ctx, input }) => {
       if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin role required' });
-      await acknowledgeSystemAlert(input.alertId);
+      await acknowledgeSystemAlert(input.alertId, getOrganizationId(ctx.user));
       return { success: true, alertId: input.alertId };
     }),
     setAlertRuleEnabled: protectedProcedure.input(z.object({ ruleId: z.string().min(1), enabled: z.boolean() })).mutation(async ({ ctx, input }) => {
       if (ctx.user?.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin role required' });
-      await setAlertRuleEnabled(input.ruleId, input.enabled);
+      await setAlertRuleEnabled(input.ruleId, input.enabled, getOrganizationId(ctx.user));
       return { success: true, ruleId: input.ruleId, enabled: input.enabled };
     }),
     generateToken: protectedProcedure.mutation(async () => {

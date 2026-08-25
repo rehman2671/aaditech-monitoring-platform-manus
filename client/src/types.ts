@@ -115,6 +115,8 @@ export interface HardwareInfo {
   biosVersion: string;
   serialNumber?: string;
   memoryModules?: MemoryModuleInfo[];
+  memorySlotsUsed?: number;
+  memorySlotsTotal?: number;
   graphicsAdapters?: GraphicsAdapterInfo[];
 }
 
