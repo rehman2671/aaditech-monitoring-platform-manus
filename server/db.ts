@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -60,6 +60,11 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.role = 'admin';
     }
 
+    if (user.organizationId !== undefined) {
+      values.organizationId = user.organizationId;
+      updateSet.organizationId = user.organizationId;
+    }
+
     if (!values.lastSignedIn) {
       values.lastSignedIn = new Date();
     }
@@ -97,6 +102,37 @@ export async function getEndpoints(orgId = 'org-enterprise-01') {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(endpoints).where(eq(endpoints.organizationId, orgId));
+}
+
+/**
+ * Returns the endpoint list together with the latest evidence that the detail
+ * view needs. Each child query is scoped by the endpoint IDs already selected
+ * from the organization-scoped endpoint query; no child record can broaden the
+ * tenant boundary.
+ */
+export async function getEnrichedEndpoints(orgId = 'org-enterprise-01') {
+  const rows = await getEndpoints(orgId);
+  return Promise.all(rows.map(async endpoint => {
+    const [metadata, battery, network, applicationUsage] = await Promise.all([
+      getEndpointMetadata(endpoint.id, orgId).catch(error => {
+        console.warn(`[Database] Endpoint metadata unavailable for ${endpoint.id}:`, error);
+        return undefined;
+      }),
+      getLatestBatteryTelemetry(endpoint.id, orgId).catch(error => {
+        console.warn(`[Database] Battery telemetry unavailable for ${endpoint.id}:`, error);
+        return undefined;
+      }),
+      getLatestNetworkTelemetry(endpoint.id, orgId).catch(error => {
+        console.warn(`[Database] Network telemetry unavailable for ${endpoint.id}:`, error);
+        return [];
+      }),
+      getApplicationUsage(endpoint.id, orgId).catch(error => {
+        console.warn(`[Database] Application usage unavailable for ${endpoint.id}:`, error);
+        return [];
+      }),
+    ]);
+    return { ...endpoint, metadata, battery, networkAdapters: network, applicationUsage };
+  }));
 }
 
 export async function getAlertRules(orgId = 'org-enterprise-01') {
@@ -144,30 +180,71 @@ export async function getStaleEndpoints(thresholdMinutes = 15) {
   return await db.select().from(endpoints).where(sql`lastSeenAt < ${cutoff} AND status = 'online'`);
 }
 
-export async function getEndpointMetadata(endpointId: string) {
+export async function getEndpointMetadata(endpointId: string, orgId = 'org-enterprise-01') {
   const db = await getDb();
   if (!db) return undefined;
-  const rows = await db.select().from(endpointMetadata).where(eq(endpointMetadata.endpointId, endpointId)).limit(1);
-  return rows[0];
+  try {
+    const rows = await db.select({ metadata: endpointMetadata })
+      .from(endpointMetadata)
+      .innerJoin(endpoints, eq(endpointMetadata.endpointId, endpoints.id))
+      .where(and(eq(endpointMetadata.endpointId, endpointId), eq(endpoints.organizationId, orgId)))
+      .limit(1);
+    return rows[0]?.metadata;
+  } catch (error) {
+    console.warn(`[Database] Endpoint metadata table unavailable for ${endpointId}:`, error);
+    return undefined;
+  }
 }
 
-export async function getLatestBatteryTelemetry(endpointId: string) {
+export async function getLatestBatteryTelemetry(endpointId: string, orgId = 'org-enterprise-01') {
   const db = await getDb();
   if (!db) return undefined;
-  const rows = await db.select().from(batteryTelemetry).where(eq(batteryTelemetry.endpointId, endpointId)).orderBy(sql`capturedAt DESC`).limit(1);
-  return rows[0];
+  try {
+    const rows = await db.select({ battery: batteryTelemetry })
+      .from(batteryTelemetry)
+      .innerJoin(endpoints, eq(batteryTelemetry.endpointId, endpoints.id))
+      .where(and(eq(batteryTelemetry.endpointId, endpointId), eq(endpoints.organizationId, orgId)))
+      .orderBy(sql`capturedAt DESC`)
+      .limit(1);
+    return rows[0]?.battery;
+  } catch (error) {
+    console.warn(`[Database] Battery telemetry table unavailable for ${endpointId}:`, error);
+    return undefined;
+  }
 }
 
-export async function getLatestNetworkTelemetry(endpointId: string) {
+export async function getLatestNetworkTelemetry(endpointId: string, orgId = 'org-enterprise-01') {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(networkTelemetry).where(eq(networkTelemetry.endpointId, endpointId)).orderBy(sql`capturedAt DESC`).limit(10);
+  try {
+    const rows = await db.select({ network: networkTelemetry })
+      .from(networkTelemetry)
+      .innerJoin(endpoints, eq(networkTelemetry.endpointId, endpoints.id))
+      .where(and(eq(networkTelemetry.endpointId, endpointId), eq(endpoints.organizationId, orgId)))
+      .orderBy(sql`capturedAt DESC`)
+      .limit(10);
+    return rows.map(row => row.network);
+  } catch (error) {
+    console.warn(`[Database] Network telemetry table unavailable for ${endpointId}:`, error);
+    return [];
+  }
 }
 
-export async function getApplicationUsage(endpointId: string) {
+export async function getApplicationUsage(endpointId: string, orgId = 'org-enterprise-01') {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(appUsageTelemetry).where(eq(appUsageTelemetry.endpointId, endpointId)).orderBy(sql`lastUsedAt DESC`).limit(100);
+  try {
+    const rows = await db.select({ application: appUsageTelemetry })
+      .from(appUsageTelemetry)
+      .innerJoin(endpoints, eq(appUsageTelemetry.endpointId, endpoints.id))
+      .where(and(eq(appUsageTelemetry.endpointId, endpointId), eq(endpoints.organizationId, orgId)))
+      .orderBy(sql`lastUsedAt DESC`)
+      .limit(100);
+    return rows.map(row => row.application);
+  } catch (error) {
+    console.warn(`[Database] Application usage table unavailable for ${endpointId}:`, error);
+    return [];
+  }
 }
 
 export async function recordEndpointMetadata(endpointId: string, values: Partial<typeof endpointMetadata.$inferInsert>) {

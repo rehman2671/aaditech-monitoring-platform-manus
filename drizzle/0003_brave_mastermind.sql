@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `organizationId` varchar(64) DEFAULT 'org-enterprise-01' NOT NULL;

@@ -22,6 +22,13 @@
       "when": 1786650632255,
       "tag": "0002_woozy_nightmare",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1787667544324,
+      "tag": "0003_brave_mastermind",
+      "breakpoints": true
     }
   ]
 }

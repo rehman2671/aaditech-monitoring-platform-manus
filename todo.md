@@ -110,3 +110,10 @@
 - [x] Re-verify the 2.4.18 MSI manifest, SHA-256 checksum, and Authenticode status after decompiling it to prove the embedded runtime config is present in that same artifact.
 
 - [x] Run a standalone successful `Get-AuthenticodeSignature` check for `SentinelPulseAgent-2.4.18-x64.msi` after decompilation and record the `NotSigned`/signature status for that same artifact before marking the todo complete.
+
+- [x] Enrich the authenticated monitoring.endpoints payload with tenant-scoped metadata, latest battery evidence, latest network adapters, and application-usage records instead of requiring disconnected detail calls.
+
+- [x] Pass the authenticated organization identity from the monitoring router context into endpoint selection and enrichment instead of relying on the hardcoded default organization.
+- [x] Enforce endpoint ownership on metadata, battery, network, and application-usage enrichment queries and add a cross-tenant regression test for the enriched payload.
+
+- [x] Add focused monitoring tests proving metadata, battery, network, and application-usage evidence for an endpoint is unavailable when the authenticated organization does not own that endpoint.

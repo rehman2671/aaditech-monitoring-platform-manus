@@ -2,22 +2,27 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
-import { getEndpoints, getAlertRules, getSystemAlerts, getEnrollmentTokens, getEndpointMetadata, getLatestBatteryTelemetry, getLatestNetworkTelemetry, getApplicationUsage, recordEndpointMetadata, acknowledgeSystemAlert, setAlertRuleEnabled } from "./db";
+import { getEndpoints, getEnrichedEndpoints, getAlertRules, getSystemAlerts, getEnrollmentTokens, getEndpointMetadata, getLatestBatteryTelemetry, getLatestNetworkTelemetry, getApplicationUsage, recordEndpointMetadata, acknowledgeSystemAlert, setAlertRuleEnabled } from "./db";
 import { z } from "zod";
 import path from "path";
 import crypto from "crypto";
 import { TRPCError } from "@trpc/server";
+import type { TrpcContext } from "./_core/context";
 import { calculateHealthScore } from "./healthScore";
 import { broadcastRealtimeEvent } from './realtime';
 
-async function getReportInputs() {
-  const endpoints = await getEndpoints();
-  const alerts = await getSystemAlerts();
+function getOrganizationId(user: NonNullable<TrpcContext['user']>) {
+  return user.organizationId;
+}
+
+async function getReportInputs(orgId: string) {
+  const endpoints = await getEndpoints(orgId);
+  const alerts = await getSystemAlerts(orgId);
   const telemetry = await Promise.all(endpoints.map(async endpoint => ({
     endpointId: endpoint.id,
-    battery: await getLatestBatteryTelemetry(endpoint.id),
-    network: (await getLatestNetworkTelemetry(endpoint.id))[0],
-    applications: await getApplicationUsage(endpoint.id),
+    battery: await getLatestBatteryTelemetry(endpoint.id, orgId),
+    network: (await getLatestNetworkTelemetry(endpoint.id, orgId))[0],
+    applications: await getApplicationUsage(endpoint.id, orgId),
   })));
   return { endpoints, alerts, telemetry };
 }
@@ -45,8 +50,8 @@ export const appRouter = router({
         diskCriticalCount: 1,
       };
     }),
-    endpoints: protectedProcedure.query(async () => {
-      return await getEndpoints();
+    endpoints: protectedProcedure.query(async ({ ctx }) => {
+      return await getEnrichedEndpoints(getOrganizationId(ctx.user));
     }),
     alertRules: protectedProcedure.query(async () => {
       return await getAlertRules();
@@ -57,17 +62,17 @@ export const appRouter = router({
     enrollmentTokens: protectedProcedure.query(async () => {
       return await getEnrollmentTokens();
     }),
-    endpointMetadata: protectedProcedure.input(z.object({ endpointId: z.string().min(1) })).query(async ({ input }) => {
-      return getEndpointMetadata(input.endpointId);
+    endpointMetadata: protectedProcedure.input(z.object({ endpointId: z.string().min(1) })).query(async ({ ctx, input }) => {
+      return getEndpointMetadata(input.endpointId, getOrganizationId(ctx.user));
     }),
-    battery: protectedProcedure.input(z.object({ endpointId: z.string().min(1) })).query(async ({ input }) => {
-      return getLatestBatteryTelemetry(input.endpointId);
+    battery: protectedProcedure.input(z.object({ endpointId: z.string().min(1) })).query(async ({ ctx, input }) => {
+      return getLatestBatteryTelemetry(input.endpointId, getOrganizationId(ctx.user));
     }),
-    network: protectedProcedure.input(z.object({ endpointId: z.string().min(1) })).query(async ({ input }) => {
-      return getLatestNetworkTelemetry(input.endpointId);
+    network: protectedProcedure.input(z.object({ endpointId: z.string().min(1) })).query(async ({ ctx, input }) => {
+      return getLatestNetworkTelemetry(input.endpointId, getOrganizationId(ctx.user));
     }),
-    applicationUsage: protectedProcedure.input(z.object({ endpointId: z.string().min(1) })).query(async ({ input }) => {
-      return getApplicationUsage(input.endpointId);
+    applicationUsage: protectedProcedure.input(z.object({ endpointId: z.string().min(1) })).query(async ({ ctx, input }) => {
+      return getApplicationUsage(input.endpointId, getOrganizationId(ctx.user));
     }),
     healthScore: protectedProcedure.input(z.object({
       cpuUtilizationPercent: z.number().min(0).max(100).optional(),
@@ -112,13 +117,13 @@ export const appRouter = router({
     }),
   }),
   reports: router({
-    exportCsv: protectedProcedure.query(async () => {
-      const { endpoints, alerts, telemetry } = await getReportInputs();
+    exportCsv: protectedProcedure.query(async ({ ctx }) => {
+      const { endpoints, alerts, telemetry } = await getReportInputs(getOrganizationId(ctx.user));
       const filePath = generateCsvReport(endpoints, alerts, telemetry);
       return { success: true, format: 'csv' as const, downloadUrl: `/exports/${path.basename(filePath)}` };
     }),
-    exportPdf: protectedProcedure.query(async () => {
-      const { endpoints, alerts, telemetry } = await getReportInputs();
+    exportPdf: protectedProcedure.query(async ({ ctx }) => {
+      const { endpoints, alerts, telemetry } = await getReportInputs(getOrganizationId(ctx.user));
       const filePath = generatePdfReport(endpoints, alerts, telemetry);
       return { success: true, format: 'pdf' as const, downloadUrl: `/exports/${path.basename(filePath)}` };
     }),
