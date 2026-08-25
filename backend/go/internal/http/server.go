@@ -2,7 +2,9 @@ package http
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -64,8 +66,8 @@ func (s *Server) RegisterRoutes() http.Handler {
 		json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
 	})
 
-	// Telemetry Ingress
-	mux.Handle("/api/v1/telemetry", telemetry.HandleTelemetryIngest(s.rdb, s.cfg.StreamName))
+	// Telemetry ingress is authenticated with the one-time-enrolled device credential.
+	mux.Handle("/api/v1/telemetry", s.requireDeviceAuth(telemetry.HandleTelemetryIngest(s.rdb, s.cfg.StreamName)))
 
 	// Enrollment
 	enrollmentHandler := api.NewEnrollmentHandler(s.db)
@@ -110,12 +112,12 @@ func (s *Server) RegisterRoutes() http.Handler {
 		alertHandler.TestWebhook(w, r, claims)
 	})))
 
-		// Admin Retention Purge Route (Admin RBAC required)
-		mux.Handle("/api/v1/admin/retention/purge", s.requireAuth(http.HandlerFunc(api.HandleAdminRetentionPurge(s.db))))
+	// Admin Retention Purge Route (Admin RBAC required)
+	mux.Handle("/api/v1/admin/retention/purge", s.requireAuth(http.HandlerFunc(api.HandleAdminRetentionPurge(s.db))))
 
-		// Admin Diagnostics Audit Trail
-		diagHandler := api.NewDiagnosticHandler(s.db)
-		mux.Handle("/api/v1/admin/diagnostics", s.requireAuth(http.HandlerFunc(diagHandler.ListEvents)))
+	// Admin Diagnostics Audit Trail
+	diagHandler := api.NewDiagnosticHandler(s.db)
+	mux.Handle("/api/v1/admin/diagnostics", s.requireAuth(http.HandlerFunc(diagHandler.ListEvents)))
 
 	// Windows MSI builder and signed artifact workflow.
 	msiBuilder := api.NewMSIBuildHandler(s.db, s.cfg.MSIArtifactDir, s.cfg.MSIBuilderKey)
@@ -128,6 +130,39 @@ func (s *Server) RegisterRoutes() http.Handler {
 	mux.HandleFunc("/api/v1/internal/msi-builder/status", msiBuilder.InternalStatus)
 
 	return mux
+}
+
+func (s *Server) requireDeviceAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			http.Error(w, "Unauthorized: device bearer token required", http.StatusUnauthorized)
+			return
+		}
+		rawToken := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+		if rawToken == "" {
+			http.Error(w, "Unauthorized: device bearer token required", http.StatusUnauthorized)
+			return
+		}
+		hash := sha256.Sum256([]byte(rawToken))
+		var endpointID, tenantID string
+		err := s.db.QueryRowContext(r.Context(), `
+			SELECT c.endpoint_id, e.tenant_id
+			FROM endpoint_credentials c
+			JOIN endpoints e ON e.id = c.endpoint_id
+			WHERE c.device_token_hash = $1 AND c.revoked = FALSE
+		`, hex.EncodeToString(hash[:])).Scan(&endpointID, &tenantID)
+		if err == sql.ErrNoRows {
+			http.Error(w, "Unauthorized: invalid or revoked device token", http.StatusUnauthorized)
+			return
+		}
+		if err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		ctx := telemetry.WithDeviceIdentity(r.Context(), telemetry.DeviceIdentity{EndpointID: endpointID, TenantID: tenantID})
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 func (s *Server) requireAuth(next http.Handler) http.Handler {

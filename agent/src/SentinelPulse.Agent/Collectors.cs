@@ -7,16 +7,16 @@ namespace SentinelPulse.Agent
     public class SystemMetrics
     {
         [JsonPropertyName("cpu_utilization")]
-        public double CpuUtilization { get; set; }
+        public double? CpuUtilization { get; set; }
 
         [JsonPropertyName("ram_utilization")]
-        public double RamUtilization { get; set; }
+        public double? RamUtilization { get; set; }
 
         [JsonPropertyName("disk_utilization")]
-        public double DiskUtilization { get; set; }
+        public double? DiskUtilization { get; set; }
 
         [JsonPropertyName("temperature_c")]
-        public double TemperatureC { get; set; }
+        public double? TemperatureC { get; set; }
 
         [JsonPropertyName("hostname")]
         public string Hostname { get; set; } = Environment.MachineName;
@@ -45,7 +45,8 @@ namespace SentinelPulse.Agent
             }
             catch
             {
-                metrics.CpuUtilization = 15.0; // fallback if WMI restricted
+                // Preserve unavailable evidence as null; never invent a utilization value.
+                metrics.CpuUtilization = null;
             }
 
             try
@@ -65,7 +66,8 @@ namespace SentinelPulse.Agent
             }
             catch
             {
-                metrics.RamUtilization = 45.0;
+                // Preserve unavailable evidence as null; never invent a utilization value.
+                metrics.RamUtilization = null;
             }
 
             try
@@ -85,10 +87,12 @@ namespace SentinelPulse.Agent
             }
             catch
             {
-                metrics.DiskUtilization = 60.0;
+                // Preserve unavailable evidence as null; never invent a utilization value.
+                metrics.DiskUtilization = null;
             }
 
-            metrics.TemperatureC = 42.5; // Nominal thermal baseline
+            // Temperature is not universally exposed by WMI; null is the truthful state.
+            metrics.TemperatureC = null;
             return metrics;
         }
     }

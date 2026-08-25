@@ -71,3 +71,25 @@
 - [x] Assert the descriptive INVALID_API_PAYLOAD error message text for both null and object endpoint responses.
 
 - [x] Align preflight health probes with the canonical Go routes /health/live and /health/ready, and assert the exact paths in regression tests.
+
+- [ ] Remove synthetic CPU/RAM/disk values and hardcoded org-tenant-default attribution from telemetry persistence.
+- [ ] Propagate authenticated endpoint tenant identity through Redis telemetry messages and enforce endpoint/token tenant isolation.
+- [ ] Add backend tests proving unauthenticated, revoked, mismatched-endpoint, and cross-tenant telemetry writes are rejected.
+
+## Approved truthful telemetry and tenant isolation — 2026-08-25
+
+- [ ] Add a non-destructive migration making persisted metric columns nullable so unavailable WMI evidence is stored as NULL rather than fabricated values.
+- [x] Propagate authenticated tenant identity through the telemetry envelope and Redis stream.
+- [x] Require valid device bearer credentials for telemetry ingestion and reject revoked or unknown credentials.
+- [x] Reject telemetry when the envelope endpoint ID does not match the authenticated device credential.
+- [x] Persist real CPU, RAM, and disk values from the telemetry payload, preserving missing values as NULL.
+- [ ] Remove fabricated CPU, RAM, disk, and temperature fallbacks from the Windows agent collector.
+- [x] Add backend tests for telemetry authentication, endpoint matching, tenant isolation, and real metric persistence.
+- [x] Run full frontend, Go backend, and available Windows-agent validation; document any unavailable platform-specific validation.
+
+- [x] Add a Go regression test proving a valid device credential cannot persist telemetry for an endpoint or tenant outside its authenticated tenant scope.
+
+- [x] Add an end-to-end Go test authenticating a valid device bearer token and proving wrong-endpoint telemetry is rejected before persistence.
+- [x] Add an integration-style test covering device-auth middleware, ingress queue, and worker for a tenant-scoped credential attempting to affect another tenant endpoint.
+
+- [x] Add one Go integration-style telemetry test that authenticates a valid device bearer token, submits through HTTP ingress, confirms Redis queue behavior, runs worker processing, and proves cross-tenant endpoint access is rejected.

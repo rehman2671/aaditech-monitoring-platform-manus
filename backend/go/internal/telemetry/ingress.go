@@ -9,14 +9,31 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+type deviceIdentityContextKey struct{}
+
+type DeviceIdentity struct {
+	EndpointID string
+	TenantID   string
+}
+
+func WithDeviceIdentity(ctx context.Context, identity DeviceIdentity) context.Context {
+	return context.WithValue(ctx, deviceIdentityContextKey{}, identity)
+}
+
+func DeviceIdentityFromContext(ctx context.Context) (DeviceIdentity, bool) {
+	identity, ok := ctx.Value(deviceIdentityContextKey{}).(DeviceIdentity)
+	return identity, ok && identity.EndpointID != "" && identity.TenantID != ""
+}
+
 type TelemetryEnvelope struct {
-	SchemaVersion   string          `json:"schema_version"`
-	EventID         string          `json:"event_id"`
-	EndpointID      string          `json:"endpoint_id"`
-	SequenceNumber  int64           `json:"sequence_number"`
-	CaptureTime     string          `json:"capture_time"`
-	Module          string          `json:"module"`
-	Payload         json.RawMessage `json:"payload"`
+	SchemaVersion  string          `json:"schema_version"`
+	EventID        string          `json:"event_id"`
+	EndpointID     string          `json:"endpoint_id"`
+	SequenceNumber int64           `json:"sequence_number"`
+	CaptureTime    string          `json:"capture_time"`
+	Module         string          `json:"module"`
+	TenantID       string          `json:"tenant_id,omitempty"`
+	Payload        json.RawMessage `json:"payload"`
 }
 
 func HandleTelemetryIngest(rdb *redis.Client, streamName string) http.HandlerFunc {
@@ -35,6 +52,12 @@ func HandleTelemetryIngest(rdb *redis.Client, streamName string) http.HandlerFun
 			return
 		}
 
+		identity, ok := DeviceIdentityFromContext(r.Context())
+		if !ok {
+			http.Error(w, "Unauthorized: device credential required", http.StatusUnauthorized)
+			return
+		}
+
 		var env TelemetryEnvelope
 		decoder := json.NewDecoder(r.Body)
 		decoder.DisallowUnknownFields()
@@ -43,10 +66,15 @@ func HandleTelemetryIngest(rdb *redis.Client, streamName string) http.HandlerFun
 			return
 		}
 
-		if env.EventID == "" || env.EndpointID == "" {
-			http.Error(w, "Missing required envelope fields (event_id, endpoint_id)", http.StatusBadRequest)
+		if env.EventID == "" || env.EndpointID == "" || env.CaptureTime == "" {
+			http.Error(w, "Missing required envelope fields (event_id, endpoint_id, capture_time)", http.StatusBadRequest)
 			return
 		}
+		if env.EndpointID != identity.EndpointID {
+			http.Error(w, "Forbidden: endpoint credential does not match envelope endpoint", http.StatusForbidden)
+			return
+		}
+		env.TenantID = identity.TenantID
 
 		payloadBytes, err := json.Marshal(env)
 		if err != nil {

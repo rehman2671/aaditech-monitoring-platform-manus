@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -45,12 +46,12 @@ func (w *Worker) Start(ctx context.Context) {
 			return
 		default:
 			streams, err := w.rdb.XReadGroup(ctx, &redis.XReadGroupArgs{
-		Group:    w.groupName,
-		Consumer: w.consumer,
-		Streams:  []string{w.streamName, ">"},
-		Count:    10,
-		Block:    2 * time.Second,
-	}).Result()
+				Group:    w.groupName,
+				Consumer: w.consumer,
+				Streams:  []string{w.streamName, ">"},
+				Count:    10,
+				Block:    2 * time.Second,
+			}).Result()
 
 			if err != nil {
 				continue
@@ -58,7 +59,7 @@ func (w *Worker) Start(ctx context.Context) {
 
 			for _, stream := range streams {
 				for _, msg := range stream.Messages {
-					if err := w.processMessage(ctx, msg); err == nil {
+					if err := w.ProcessMessage(ctx, msg); err == nil {
 						w.rdb.XAck(ctx, w.streamName, w.groupName, msg.ID)
 					} else {
 						log.Printf("[Worker] Failed to process message %s: %v. Retaining in pending list.", msg.ID, err)
@@ -69,7 +70,7 @@ func (w *Worker) Start(ctx context.Context) {
 	}
 }
 
-func (w *Worker) processMessage(ctx context.Context, msg redis.XMessage) error {
+func (w *Worker) ProcessMessage(ctx context.Context, msg redis.XMessage) error {
 	envelopeStr, ok := msg.Values["envelope"].(string)
 	if !ok {
 		return nil // skip malformed
@@ -79,6 +80,22 @@ func (w *Worker) processMessage(ctx context.Context, msg redis.XMessage) error {
 	if err := json.Unmarshal([]byte(envelopeStr), &env); err != nil {
 		return err
 	}
+	if env.TenantID == "" || env.EndpointID == "" || env.CaptureTime == "" {
+		return fmt.Errorf("telemetry envelope missing tenant_id, endpoint_id, or capture_time")
+	}
+	capturedAt, err := time.Parse(time.RFC3339Nano, env.CaptureTime)
+	if err != nil {
+		return fmt.Errorf("invalid capture_time: %w", err)
+	}
+
+	var metrics struct {
+		CPU  *float64 `json:"cpu_utilization"`
+		RAM  *float64 `json:"ram_utilization"`
+		Disk *float64 `json:"disk_utilization"`
+	}
+	if err := json.Unmarshal(env.Payload, &metrics); err != nil {
+		return fmt.Errorf("invalid telemetry payload: %w", err)
+	}
 
 	tx, err := w.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -86,31 +103,31 @@ func (w *Worker) processMessage(ctx context.Context, msg redis.XMessage) error {
 	}
 	defer tx.Rollback()
 
-	// Persist into TimescaleDB hypertable with idempotency check
+	// Persist only values actually emitted by the collector; unavailable values remain NULL.
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO endpoint_metrics_hyper (tenant_id, endpoint_id, captured_at, cpu_utilization, ram_utilization, disk_utilization, payload_json)
-		VALUES ($1, $2, NOW(), 50.0, 60.0, 40.0, $3)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (tenant_id, endpoint_id, captured_at) DO NOTHING
-	`, "org-tenant-default", env.EndpointID, env.Payload)
+	`, env.TenantID, env.EndpointID, capturedAt.UTC(), metrics.CPU, metrics.RAM, metrics.Disk, env.Payload)
 
 	if err != nil {
 		return err
 	}
 
-	// Update endpoint last_seen
-	_, err = tx.ExecContext(ctx, `
+	// Update only the endpoint belonging to the authenticated tenant.
+	result, err := tx.ExecContext(ctx, `
 		UPDATE endpoints
-		SET status = 'online', last_seen = NOW()
-		WHERE id = $1
-	`, env.EndpointID)
-
+		SET status = 'online', last_seen = $3
+		WHERE id = $1 AND tenant_id = $2
+	`, env.EndpointID, env.TenantID, capturedAt.UTC())
 	if err != nil {
-		// If endpoint doesn't exist yet, insert stub for operational continuity
-		_, _ = tx.ExecContext(ctx, `
-			INSERT INTO endpoints (id, tenant_id, hostname, ip_address, os_version, status, last_seen)
-			VALUES ($1, 'org-tenant-default', $1, '127.0.0.1', 'Windows 11 Pro', 'online', NOW())
-			ON CONFLICT (id) DO UPDATE SET status = 'online', last_seen = NOW()
-		`, env.EndpointID)
+		return err
+	}
+	if affected, err := result.RowsAffected(); err != nil || affected != 1 {
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("endpoint %s is not registered in tenant %s", env.EndpointID, env.TenantID)
 	}
 
 	return tx.Commit()
