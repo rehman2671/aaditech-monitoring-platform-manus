@@ -2,7 +2,7 @@
 
 ## 1. Acceptance Criteria & Preflight Validation
 - [ ] Define explicit, testable acceptance criteria for universal MSI packaging, dynamic config, two-phase enrollment, and WMI telemetry streaming.
-- [ ] Add preflight validation script for backend, database, and local runner health.
+- [x] Add preflight validation script for backend, database, and local runner health.
 
 ## 2. Configuration & Enrollment Precedence Fixes
 - [ ] Align `AgentConfiguration.cs` precedence with design: authoritative JSON `config.json` -> Environment Variables -> Registry fallback.
@@ -56,3 +56,12 @@
 
 - [x] Add a healthy explicit-evidence DashboardOverview test asserting the TELEMETRY STATUS OBSERVED label.
 - [x] Strengthen the timestamped DashboardOverview test to assert the rendered freshness value for a supplied capturedAt timestamp.
+
+- [x] Extend preflight with a real database readiness/connectivity check instead of only checking DATABASE_URL presence.
+- [x] Add an actual MSI/local runner health probe through a configured status endpoint or heartbeat.
+- [x] Add regression tests for healthy, unhealthy, and misconfigured preflight backend/database/runner scenarios.
+
+- [x] Include scripts/**/*.test.ts in the Vitest patterns so preflight regression tests execute in pnpm test.
+- [x] Re-run pnpm test and verify the preflight healthy, unhealthy, and misconfigured scenarios pass.
+
+- [x] Remove mock-admin-token fallback from Platform Settings and use the authenticated session credential or fail closed.

@@ -3,9 +3,9 @@ import { Database, Save, LockKeyhole, Trash2, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
-interface SettingsPageProps { canWrite: boolean; }
+interface SettingsPageProps { canWrite: boolean; accessToken: string; }
 
-export default function SettingsPage({ canWrite }: SettingsPageProps) {
+export default function SettingsPage({ canWrite, accessToken }: SettingsPageProps) {
   const [retentionDays, setRetentionDays] = useState('90');
   const [heartbeatInterval, setHeartbeatInterval] = useState('60');
   const [purgeRetentionDays, setPurgeRetentionDays] = useState('90');
@@ -26,12 +26,12 @@ export default function SettingsPage({ canWrite }: SettingsPageProps) {
     }
     setIsPurging(true);
     try {
-      const token = localStorage.getItem('sentinel_token') || 'mock-admin-token';
+      if (!accessToken.trim()) throw new Error('Authenticated admin session is required.');
       const res = await fetch('/api/v1/admin/retention/purge', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
           retention_days: parseInt(purgeRetentionDays, 10),

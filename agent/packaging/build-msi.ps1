@@ -41,6 +41,7 @@ if (-not (Test-Path $artifactsDir)) {
 }
 $wxsFile = Join-Path $packagingDir "sentinelpulse-agent.wxs"
 $payloadWxsFile = Join-Path $artifactsDir "agent-payload.generated.wxs"
+$runtimeConfigPath = Join-Path $artifactsDir "agent-config.generated.json"
 $msiFile = Join-Path $artifactsDir ("SentinelPulseAgent-{0}-x64.msi" -f $AgentSemVer)
 $checksumFile = "$msiFile.sha256"
 $manifestFile = "$msiFile.manifest.json"
@@ -274,14 +275,13 @@ foreach ($file in $publishedFiles) {
 $xml.ToString() | Set-Content -Path $payloadWxsFile -Encoding utf8
 
 Write-Host "Generating runtime config.json for flexible endpoint configuration..."
-$programDataConfigDir = Join-Path $Env:ProgramData "SentinelPulse\Agent"
-if (-not (Test-Path $programDataConfigDir)) { New-Item -ItemType Directory -Force $programDataConfigDir | Out-Null }
 $runtimeConfig = [ordered]@{
-    ApiBaseUrl = $APIBaseUrl
-    EndpointId = $EndpointId
-    EnrollmentToken = $EnrollmentToken
+    serverUrl = $APIBaseUrl
+    endpointId = $EndpointId
+    agentVersion = $AgentSemVer
+    enrollmentToken = $EnrollmentToken
 }
-$runtimeConfig | ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $programDataConfigDir "config.json") -Encoding utf8
+$runtimeConfig | ConvertTo-Json -Depth 4 | Set-Content -Path $runtimeConfigPath -Encoding utf8
 
 Write-Host "Building WiX v4 MSI with $($publishedFiles.Count) payload files..."
 & $wixExe build `
@@ -292,8 +292,9 @@ Write-Host "Building WiX v4 MSI with $($publishedFiles.Count) payload files..."
 	-d "PublishDir=$publishDir" `
 	-d "BootstrapApiBaseUrl=$APIBaseUrl" `
 	-d "BootstrapEndpointId=$EndpointId" `
-	-d "BootstrapEnrollmentToken=$EnrollmentToken" `
-	$wxsFile `
+			-d "BootstrapEnrollmentToken=$EnrollmentToken" `
+        -d "RuntimeConfigPath=$runtimeConfigPath" `
+		$wxsFile `
     $payloadWxsFile `
     -o $msiFile
 if ($LASTEXITCODE -ne 0) { throw "WiX v4 build failed with exit code $LASTEXITCODE" }
@@ -324,6 +325,8 @@ $manifest = [ordered]@{
     agent_signature_status = if ($agentSignature) { $agentSignature.Status.ToString() } else { "NotSigned" }
     msi_signature_status = if ($msiSignature) { $msiSignature.Status.ToString() } else { "NotSigned" }
     size_bytes = (Get-Item $msiFile).Length
+    runtime_config_filename = (Split-Path -Leaf $runtimeConfigPath)
+    runtime_config_sha256 = (Get-FileHash -Algorithm SHA256 -Path $runtimeConfigPath).Hash.ToLowerInvariant()
 }
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path $manifestFile -Encoding utf8
 

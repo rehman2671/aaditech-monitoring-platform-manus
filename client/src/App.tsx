@@ -303,7 +303,7 @@ export default function App() {
                   <Route path="/alert-rules" component={AlertRules} />
                   <Route path="/tokens"><EnrollmentTokens tokens={shell.tokens} onCreateToken={handleCreateToken} canWrite={shell.isAdmin} accessToken={session.accessToken} /></Route>
                   <Route path="/diagnostics"><DiagnosticEventsPage accessToken={session.accessToken} canWrite={shell.isAdmin} /></Route>
-                  <Route path="/settings"><SettingsPage canWrite={shell.isAdmin} /></Route>
+                  <Route path="/settings"><SettingsPage canWrite={shell.isAdmin} accessToken={session.accessToken} /></Route>
                   <Route component={NotFound} />
                 </Switch>
               </div>

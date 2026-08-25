@@ -29,6 +29,9 @@
   <?ifndef BootstrapEnrollmentToken ?>
     <?define BootstrapEnrollmentToken = "" ?>
   <?endif ?>
+  <?ifndef RuntimeConfigPath ?>
+    <?define RuntimeConfigPath = "..\\artifacts\\agent-config.generated.json" ?>
+  <?endif ?>
 
   <Package
       Name="SentinelPulse Windows Agent"
@@ -139,13 +142,13 @@
   <Fragment>
     <Component Id="ConfigurationDirectoriesComponent" Directory="CONFIGFOLDER" Guid="*">
       <CreateFolder />
+      <File Id="AgentRuntimeConfig" Source="$(var.RuntimeConfigPath)" KeyPath="yes" />
       <RegistryValue
           Root="HKLM"
           Key="Software\SentinelPulse\Agent"
           Name="ConfigurationDirectory"
           Type="string"
-          Value="[CONFIGFOLDER]"
-          KeyPath="yes" />
+          Value="[CONFIGFOLDER]" />
       <RemoveFolder Id="RemoveConfigurationDirectory" On="uninstall" />
     </Component>
 
