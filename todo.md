@@ -194,3 +194,13 @@
 - [ ] Resolve or explicitly document the Windows NuGet ConfigurationDefaults restore blocker and execute the available Windows unit tests.
 - [ ] Validate clean-profile MSI generation, version/hash parity, enrollment configuration, and production signing gate.
 - [ ] Run final frontend, backend, packaging, and end-to-end acceptance tests; update the migration decision only from observed evidence.
+
+- [ ] Resolve MSI 2.4.22 installation failure caused by Windows Application Control blocking the unsigned executable; production validation requires a trusted Code Signing certificate or an explicitly approved local test-policy exception.
+- [x] Confirm accepted telemetry after the replay-enabled 2.4.20 build: PostgreSQL metrics increased from 5928 to 5950 during a 45-second polling window, and the durable agent log recorded buffered replay plus successful collector completion.
+
+## Simple MSI release flow
+
+- [ ] Make the primary release action explicitly named **Compile MSI** and keep the flow focused on generating a versioned MSI directly from the platform.
+- [ ] Provide the generated MSI as the primary download, with SHA-256 manifest and optional helper/verification artifacts grouped as secondary downloads.
+- [ ] Ensure release status clearly distinguishes queued, building, succeeded, failed, unsigned test, and trusted-signed states without exposing signing secrets.
+- [ ] Add regression coverage for the simplified MSI release UI and verify production build/checkpoint.
