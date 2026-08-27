@@ -34,6 +34,7 @@ function endpointWithUnavailableEvidence(): Endpoint {
     id: 'endpoint-1', organizationId: 'org-1', hostname: 'DESKTOP-TEST', serialNumber: 'Unavailable',
     ipAddress: 'Unavailable', macAddress: 'Unavailable', osVersion: 'Unavailable', osBuild: 'Unavailable',
     domainOrWorkgroup: 'Unavailable', agentVersion: 'Unavailable', status: 'offline',
+    statusReason: 'Authentication failed', statusChangedAt: '2026-08-25T08:10:00.000Z',
     lastSeenAt: 'Unavailable', createdAt: 'Unavailable',
     hardware: { cpuModel: 'Unavailable', gpuModel: 'Unavailable', motherboardModel: 'Unavailable', biosVersion: 'Unavailable' },
     disks: [], osHealth: { osVersion: 'Unavailable', osBuild: 'Unavailable', dismStatus: 'Unavailable', sfcStatus: 'Unavailable' },
@@ -65,5 +66,15 @@ describe('EndpointDetail unavailable evidence', () => {
     expect(screen.getByRole('tab', { name: 'Software Inventory (0)' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Active Processes (0)' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Event Viewer Logs (0)' })).toBeTruthy();
+  });
+
+  it('renders explicit lifecycle reason and transition timestamp', () => {
+    render(
+      <Router>
+        <EndpointDetail endpoints={[endpointWithUnavailableEvidence()]} onTriggerOnDemandRefresh={vi.fn()} />
+      </Router>,
+    );
+
+    expect(screen.getAllByText(/Lifecycle evidence:/).some(element => element.textContent?.includes('Authentication failed'))).toBe(true);
   });
 });
