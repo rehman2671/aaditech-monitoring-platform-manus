@@ -76,7 +76,7 @@ export default function App() {
     if (!endpointQuery.data) return;
     setEndpoints(prev => endpointQuery.data.map(record => {
       const fallback = prev.find(endpoint => endpoint.id === record.id);
-      const candidate = record as typeof record & Partial<Endpoint> & { extendedHardware?: Endpoint['hardware']; extendedDisks?: Endpoint['disks']; metadata?: Endpoint['metadata'] };
+      const candidate = record as typeof record & Partial<Endpoint> & { status_reason?: string; status_changed_at?: string; extendedHardware?: Endpoint['hardware']; extendedDisks?: Endpoint['disks']; metadata?: Endpoint['metadata'] };
       const mappedStatus = normalizeEndpointStatus(record.status);
       return {
         ...fallback,
@@ -92,7 +92,9 @@ export default function App() {
         domainOrWorkgroup: evidenceFallback(record.domainOrWorkgroup ?? fallback?.domainOrWorkgroup),
         agentVersion: evidenceFallback(record.agentVersion ?? fallback?.agentVersion),
         status: mappedStatus,
-        lastSeenAt: normalizeEndpointTimestamp(record.lastSeenAt, fallback?.lastSeenAt ?? 'Unavailable'),
+        statusReason: candidate.statusReason ?? candidate.status_reason ?? fallback?.statusReason,
+        statusChangedAt: candidate.statusChangedAt ?? candidate.status_changed_at ?? fallback?.statusChangedAt,
+        lastSeenAt: normalizeEndpointTimestamp(record.lastSeenAt ?? (candidate as { last_seen?: string }).last_seen, fallback?.lastSeenAt ?? 'Unavailable'),
         createdAt: normalizeEndpointTimestamp(record.createdAt, fallback?.createdAt ?? 'Unavailable'),
         hardware: candidate.hardware ?? fallback?.hardware ?? { cpuModel: 'Unavailable', gpuModel: 'Unavailable', motherboardModel: 'Unavailable', biosVersion: 'Unavailable' },
         disks: candidate.disks ?? fallback?.disks ?? [],
