@@ -136,9 +136,9 @@ func (h *EnrollmentHandler) EnrollAgent(w http.ResponseWriter, r *http.Request) 
 
 	// Register or update endpoint
 	_, err = tx.ExecContext(r.Context(), `
-		INSERT INTO endpoints (id, tenant_id, hostname, status, last_seen, created_at)
-		VALUES ($1, $2, $3, 'online', NOW(), NOW())
-		ON CONFLICT (id) DO UPDATE SET tenant_id = $2, hostname = $3, status = 'online', last_seen = NOW()
+INSERT INTO endpoints (id, tenant_id, hostname, status, status_reason, status_changed_at, last_seen, created_at)
+			VALUES ($1, $2, $3, 'pending', 'Enrollment succeeded; awaiting first telemetry evidence', NOW(), NULL, NOW())
+			ON CONFLICT (id) DO UPDATE SET tenant_id = $2, hostname = $3, status = 'pending', status_reason = 'Re-enrolled; awaiting first telemetry evidence', status_changed_at = NOW()
 	`, req.EndpointID, tenantID, req.Hostname)
 	if err != nil {
 		http.Error(w, "Failed to register endpoint", http.StatusInternalServerError)

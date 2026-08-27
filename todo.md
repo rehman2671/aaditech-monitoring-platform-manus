@@ -204,3 +204,5 @@
 - [ ] Provide the generated MSI as the primary download, with SHA-256 manifest and optional helper/verification artifacts grouped as secondary downloads.
 - [ ] Ensure release status clearly distinguishes queued, building, succeeded, failed, unsigned test, and trusted-signed states without exposing signing secrets.
 - [ ] Add regression coverage for the simplified MSI release UI and verify production build/checkpoint.
+
+- [ ] Add explicit backend/UI lifecycle states `ENROLLMENT_FAILED`, `AUTH_ERROR`, and `DISABLED` with truthful reason and timestamp fields; preserve tenant isolation and avoid treating failed enrollment/auth as offline or online.

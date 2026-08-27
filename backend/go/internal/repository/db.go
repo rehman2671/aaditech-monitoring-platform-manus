@@ -26,6 +26,7 @@ func RunMigrations(db *sql.DB) error {
 		filepath.Join("migrations", "002_msi_auto_enrollment.sql"),
 		filepath.Join("migrations", "003_diagnostic_events.sql"),
 		filepath.Join("migrations", "004_truthful_metrics.sql"),
+		filepath.Join("migrations", "005_endpoint_lifecycle_states.sql"),
 	}
 	for index := range migrationPaths {
 		if _, err := os.Stat(migrationPaths[index]); os.IsNotExist(err) {

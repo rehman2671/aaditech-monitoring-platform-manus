@@ -24,8 +24,8 @@ func (h *EndpointHandler) ListEndpoints(w http.ResponseWriter, r *http.Request, 
 	}
 
 	rows, err := h.db.QueryContext(r.Context(), `
-		SELECT id, hostname, ip_address, os_version, status, last_seen, created_at
-		FROM endpoints
+SELECT id, hostname, ip_address, os_version, status, status_reason, status_changed_at, last_seen, created_at
+			FROM endpoints
 		WHERE tenant_id = $1
 		ORDER BY created_at DESC
 	`, claims.OrganizationID)
@@ -36,22 +36,32 @@ func (h *EndpointHandler) ListEndpoints(w http.ResponseWriter, r *http.Request, 
 	defer rows.Close()
 
 	type Endpoint struct {
-		ID        string  `json:"id"`
-		Hostname  string  `json:"hostname"`
-		IPAddress string  `json:"ip_address"`
-		OSVersion string  `json:"os_version"`
-		Status    string  `json:"status"`
-		LastSeen  *string `json:"last_seen"`
-		CreatedAt string  `json:"created_at"`
+		ID            string  `json:"id"`
+		Hostname      string  `json:"hostname"`
+		IPAddress     string  `json:"ip_address"`
+		OSVersion     string  `json:"os_version"`
+		Status        string  `json:"status"`
+		StatusReason  *string `json:"status_reason,omitempty"`
+		StatusChanged *string `json:"status_changed_at,omitempty"`
+		LastSeen      *string `json:"last_seen"`
+		CreatedAt     string  `json:"created_at"`
 	}
 
 	var endpoints []Endpoint
 	for rows.Next() {
 		var e Endpoint
-		var lastSeen, createdAt sql.NullTime
-		if err := rows.Scan(&e.ID, &e.Hostname, &e.IPAddress, &e.OSVersion, &e.Status, &lastSeen, &createdAt); err != nil {
+		var statusReason sql.NullString
+		var statusChanged, lastSeen, createdAt sql.NullTime
+		if err := rows.Scan(&e.ID, &e.Hostname, &e.IPAddress, &e.OSVersion, &e.Status, &statusReason, &statusChanged, &lastSeen, &createdAt); err != nil {
 			http.Error(w, "Invalid endpoint row", http.StatusInternalServerError)
 			return
+		}
+		if statusReason.Valid {
+			e.StatusReason = &statusReason.String
+		}
+		if statusChanged.Valid {
+			sc := statusChanged.Time.UTC().Format(time.RFC3339)
+			e.StatusChanged = &sc
 		}
 		if lastSeen.Valid {
 			ls := lastSeen.Time.UTC().Format(time.RFC3339)

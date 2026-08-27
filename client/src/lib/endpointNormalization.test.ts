@@ -6,8 +6,10 @@ describe('endpoint normalization', () => {
     expect(normalizeEndpointStatus('online')).toBe('online');
     expect(normalizeEndpointStatus('warning')).toBe('warning');
     expect(normalizeEndpointStatus('offline')).toBe('offline');
-    expect(normalizeEndpointStatus('pending')).toBe('warning');
-    expect(normalizeEndpointStatus('disabled')).toBe('offline');
+    expect(normalizeEndpointStatus('pending')).toBe('pending');
+    expect(normalizeEndpointStatus('disabled')).toBe('disabled');
+    expect(normalizeEndpointStatus('enrollment_failed')).toBe('enrollment_failed');
+    expect(normalizeEndpointStatus('auth_error')).toBe('auth_error');
     expect(normalizeEndpointStatus('unrecognized')).toBe('offline');
   });
 

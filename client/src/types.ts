@@ -1,4 +1,4 @@
-export type EndpointStatus = 'online' | 'offline' | 'pending' | 'warning' | 'critical';
+export type EndpointStatus = 'online' | 'offline' | 'pending' | 'warning' | 'critical' | 'enrollment_failed' | 'auth_error' | 'disabled';
 export type UserRole = 'admin' | 'viewer';
 export type AlertLifecycle = 'firing' | 'resolved';
 
@@ -176,6 +176,8 @@ export interface Endpoint {
   domainOrWorkgroup: string;
   agentVersion: string;
   status: EndpointStatus;
+  statusReason?: string;
+  statusChangedAt?: string;
   lastSeenAt: string;
   createdAt: string;
   hardware: HardwareInfo;
