@@ -11,7 +11,7 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ onAuthenticated }: LoginPageProps) {
-  const [email, setEmail] = useState('ops.admin@enterprise.local');
+  const [email, setEmail] = useState(() => window.localStorage.getItem('sentinelpulse.adminEmail') || 'ops.admin@enterprise.local');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);

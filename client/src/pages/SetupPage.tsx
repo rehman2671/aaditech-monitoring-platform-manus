@@ -36,6 +36,8 @@ export default function SetupPage({ onSetupCompleted }: SetupPageProps) {
         const err = await res.json().catch(() => ({}));
         throw new Error((err as any)?.error?.message || 'Setup initialization failed.');
       }
+      window.localStorage.setItem('sentinelpulse.setupComplete', 'true');
+      window.localStorage.setItem('sentinelpulse.adminEmail', adminEmail.trim());
       toast.success('Platform initialized', { description: 'Company profile and admin account created successfully.' });
       onSetupCompleted();
     } catch (error) {
