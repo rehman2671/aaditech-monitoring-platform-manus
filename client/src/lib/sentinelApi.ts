@@ -4,6 +4,8 @@ export interface EndpointItem {
   ip_address: string;
   os_version: string;
   status: string;
+  status_reason?: string;
+  status_changed_at?: string;
   last_seen?: string;
   created_at: string;
 }
