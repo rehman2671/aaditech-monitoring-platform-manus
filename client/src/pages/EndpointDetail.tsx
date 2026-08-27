@@ -125,6 +125,11 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
             <p className="text-xs text-slate-400 font-mono mt-0.5">
               Serial: <span className="text-slate-300">{endpoint.serialNumber}</span> • IP: <span className="text-slate-300">{endpoint.ipAddress}</span> • Domain: <span className="text-slate-300">{endpoint.domainOrWorkgroup}</span>
             </p>
+            {(endpoint.statusReason || endpoint.statusChangedAt) && (
+              <p className="text-[11px] text-amber-300/80 font-mono mt-1">
+                Lifecycle evidence: {endpoint.statusReason ?? 'No reason supplied'}{endpoint.statusChangedAt ? ` • changed ${new Date(endpoint.statusChangedAt).toLocaleString()}` : ''}
+              </p>
+            )}
           </div>
         </div>
 
