@@ -1,3 +1,4 @@
+/** @vitest-environment jsdom */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, api } from './api';
 
@@ -18,5 +19,28 @@ describe('endpoint API payload validation', () => {
       code: 'INVALID_API_PAYLOAD',
       message: expect.stringMatching(/^Expected an array response from \/endpoints; received (null|object)\.$/),
     });
+  });
+});
+
+
+describe('MSI artifact downloads', () => {
+  it('downloads a checksum manifest from the authenticated job route', async () => {
+    const fetchMock = vi.fn(async () => new Response('abc123  SentinelPulseAgent.msi', {
+      status: 200,
+      headers: { 'Content-Disposition': 'attachment; filename="SentinelPulseAgent.sha256"' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn(() => 'blob:test'), revokeObjectURL: vi.fn() });
+    const click = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(click);
+
+    await api.downloadMSIManifest('token', 'job-7');
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/admin/msi-builds/job-7/manifest', expect.objectContaining({
+      headers: { Authorization: 'Bearer token' },
+      credentials: 'include',
+    }));
+    expect(click).toHaveBeenCalledOnce();
+    expect(document.querySelector('a')).toBeNull();
   });
 });
