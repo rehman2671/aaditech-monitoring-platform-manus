@@ -201,7 +201,7 @@
 ## Simple MSI release flow
 
 - [x] Make the primary release action explicitly named **Compile MSI** and keep the flow focused on generating a versioned MSI directly from the platform; UI label verified with the complete 40-test suite.
-- [ ] Provide the generated MSI as the primary download, with SHA-256 manifest and optional helper/verification artifacts grouped as secondary downloads.
+- [x] Provide the generated MSI as the primary download, with SHA-256 manifest and optional helper/verification artifacts grouped as secondary downloads; MSI and `.sha256` manifest are tenant-scoped and the manifest is a secondary action beside succeeded builds.
 - [ ] Ensure release status clearly distinguishes queued, building, succeeded, failed, unsigned test, and trusted-signed states without exposing signing secrets.
 - [ ] Add regression coverage for the simplified MSI release UI and verify production build/checkpoint.
 
