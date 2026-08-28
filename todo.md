@@ -218,3 +218,16 @@
 - [x] Add and verify an automated Windows parity check that reads the MSI release version from its filename, reads installed EXE FileVersion/ProductVersion, rejects 1.0.0 or mismatches, and records a successful 2.4.36 result; connected endpoint returned `Result: PASS`, FileVersion `2.4.36.0`, ProductVersion `2.4.36`.
 
 - [x] Add the automated 2.4.36 MSI/EXE parity PASS result to SENTINELPULSE_P0_ACCEPTANCE_STATUS.md.
+
+## Endpoint Intelligence / AI Analyst integration — 2026-08-28
+- [x] Complete a no-change repository inspection and architecture inventory against the pasted Endpoint Intelligence requirements; architecture and compatibility boundaries recorded in ENDPOINT_INTELLIGENCE_ARCHITECTURE.md.
+- [x] Define additive tenant-scoped contracts for process samples, application aggregation, deterministic findings, evidence provenance, Ollama analyses, reports, exports, and retention/downsampling; Go contracts are additive, tenant IDs are JSON-redacted, unavailable evidence is explicit, and remediation confirmation is represented.
+- [ ] Implement bounded historical process performance telemetry with truthful unavailable fields and configurable retention.
+- [ ] Implement confidence-aware application grouping plus separate application and process views.
+- [ ] Implement deterministic CPU/RAM/storage/battery/hardware intelligence and threshold-based findings without LLM-owned metrics.
+- [ ] Implement normalized event, driver, SFC/DISM, software, remote-access, and correlation findings with evidence and remediation boundaries.
+- [ ] Integrate local Ollama as an optional, timeout-bounded analysis layer that receives summaries only and cannot invent or persist authoritative metrics.
+- [ ] Add detailed endpoint intelligence report models and tenant-scoped JSON/CSV/PDF export coverage.
+- [ ] Add analyst frontend views, finding details, evidence/provenance, confidence, recommendations, and explicit no-action states.
+- [ ] Add security, tenant-isolation, privacy minimization, retention, rate limits, auditability, and Ollama failure fallbacks.
+- [ ] Validate frontend/backend/agent regressions, Windows collection, Docker runtime, Ollama availability, and end-to-end acceptance from observed evidence only.
