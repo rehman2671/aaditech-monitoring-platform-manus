@@ -212,3 +212,5 @@
 - [x] Verify the authenticated local Docker path after the Preview failure: `http://localhost:3001/login` accepted the setup account and opened `/endpoints/DESKTOP-1E02MC9` for `aziz.shaikh` as ADMIN; live endpoint data is visible, and automated setup-to-login regression coverage now passes.
 
 - [x] Render `pending`, `enrollment_failed`, `auth_error`, and `disabled` with distinct evidence-safe endpoint status labels and colors; endpoint-detail regression coverage passes.
+
+- [ ] Refresh SENTINELPULSE_P0_ACCEPTANCE_STATUS.md with the latest 51 frontend/server tests, authentication/configuration coverage, MSI manifest/status coverage, and tenant-bound enrollment failure semantics.
