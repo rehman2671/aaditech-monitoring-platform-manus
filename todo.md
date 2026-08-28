@@ -216,3 +216,5 @@
 - [x] Refresh SENTINELPULSE_P0_ACCEPTANCE_STATUS.md with the latest 51 frontend/server tests, authentication/configuration coverage, MSI manifest/status coverage, and tenant-bound enrollment failure semantics.
 
 - [x] Add and verify an automated Windows parity check that reads the MSI release version from its filename, reads installed EXE FileVersion/ProductVersion, rejects 1.0.0 or mismatches, and records a successful 2.4.36 result; connected endpoint returned `Result: PASS`, FileVersion `2.4.36.0`, ProductVersion `2.4.36`.
+
+- [x] Add the automated 2.4.36 MSI/EXE parity PASS result to SENTINELPULSE_P0_ACCEPTANCE_STATUS.md.

@@ -4,7 +4,7 @@
 
 ## Verified in this remediation pass
 
-The Windows agent was rebuilt as **2.4.36** from the current source and installed on the connected endpoint. The installation returned `MSI_EXIT=0`; the `SentinelPulseAgent` service is `Running` with `Automatic` start; the installed executable reports `2.4.36.0`; `config.json` is present under `C:\ProgramData\SentinelPulse\Agent`; and `device-credential.bin` is present for DPAPI-protected device authentication.
+The Windows agent was rebuilt as **2.4.36** from the current source and installed on the connected endpoint. The installation returned `MSI_EXIT=0`; the `SentinelPulseAgent` service is `Running` with `Automatic` start; the installed executable reports `2.4.36.0`; `config.json` is present under `C:\ProgramData\SentinelPulse\Agent`; and `device-credential.bin` is present for DPAPI-protected device authentication. The automated `verify-agent-version-parity.ps1` check passed against `SentinelPulseAgent-2.4.36-x64.msi`, confirming MSI release `2.4.36`, FileVersion `2.4.36.0`, and ProductVersion `2.4.36`, while rejecting placeholder `1.0.0` or mismatched metadata.
 
 `BATTERY_HEALTH` is executed before telemetry serialization. Its command status, exit code, output, and error are attached to the same diagnostics payload through a null-safe `ApplyCommandEvidence` path. The Windows Release build completed with zero warnings and zero errors.
 
