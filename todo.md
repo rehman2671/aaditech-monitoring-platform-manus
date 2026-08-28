@@ -188,7 +188,7 @@
 
 - [ ] Trace the installed Windows agent enrollment and telemetry request path against the running backend, including actual response codes and observed offline-buffer behavior.
 - [ ] Add or repair agent-visible structured diagnostics for enrollment, collection, queueing, and telemetry delivery without recording secrets, then verify those diagnostics from the running installed build.
-- [ ] Verify real WMI RAM/GPU/battery/network evidence from a clean collection cycle reaches tenant-scoped database rows and dashboard fields; the newest accepted payload now includes non-null CPU/RAM/disk values plus memory_modules, graphics_adapters, and diagnostics keys, but dashboard and battery/network field verification remain open.
+- [ ] Verify real WMI RAM/GPU/battery/network evidence from a clean collection cycle reaches tenant-scoped database rows and dashboard fields; live inspection confirms Agent 2.4.36 is Running/Automatic with DPAPI credential, offline buffer, configured backend URL, and an established TCP connection, but battery/network field persistence remains unverified.
 - [ ] Complete remaining diagnostic freshness and evidence-safe UI gaps for SFC, SMART, drivers, processes, software, and event records.
 - [ ] Verify live JSON/CSV/PDF exports and telemetry freshness/reconnect behavior against authenticated tenant data.
 - [ ] Resolve or explicitly document the Windows NuGet ConfigurationDefaults restore blocker and execute the available Windows unit tests.
