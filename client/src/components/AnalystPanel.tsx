@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrainCircuit, CheckCircle2, Clock3, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import {
   AnalystResponse,
   fetchLatestEndpointAnalyst,
+  fetchProcessHistory,
   runEndpointAnalyst,
+  type ProcessHistoryBucketItem,
 } from '@/lib/sentinelApi';
 
 type AnalystPanelProps = { endpointId: string; accessToken?: string };
@@ -17,6 +19,29 @@ function safeArray<T>(value: T[] | null | undefined): T[] {
 export default function AnalystPanel({ endpointId, accessToken }: AnalystPanelProps) {
   const [result, setResult] = useState<AnalystResponse | null>(null);
   const [busy, setBusy] = useState(false);
+  const [history, setHistory] = useState<ProcessHistoryBucketItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    void Promise.resolve(fetchProcessHistory(endpointId, '5m', accessToken))
+      .then((buckets) => {
+        if (!cancelled) setHistory(Array.isArray(buckets) ? buckets : []);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setHistory([]);
+          setHistoryError(error instanceof Error ? error.message : 'Process history is unavailable.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [endpointId, accessToken]);
 
   const runAnalysis = async () => {
     setBusy(true);
@@ -88,6 +113,20 @@ export default function AnalystPanel({ endpointId, accessToken }: AnalystPanelPr
           {recommendedSteps.length > 0 && <div><h4 className="text-sm font-semibold text-white mb-2">Read-only next steps</h4><ul className="text-xs text-slate-400 space-y-1 list-disc pl-5">{recommendedSteps.map(item => <li key={item}>{item}</li>)}</ul></div>}
         </div>
       )}
+
+      <section className="border-t border-slate-800 pt-5" aria-labelledby="process-trend-heading">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h4 id="process-trend-heading" className="text-sm font-semibold text-white">Process performance trend</h4>
+            <p className="text-xs text-slate-500 mt-1">Tenant-scoped 5-minute buckets from collected process evidence. Missing metrics remain unavailable.</p>
+          </div>
+          <span className="text-[11px] font-mono text-slate-500">5m</span>
+        </div>
+        {historyLoading && <p className="text-xs text-slate-500 mt-3">Loading process history…</p>}
+        {!historyLoading && historyError && <p className="text-xs text-amber-300 mt-3">Process history unavailable: {historyError}</p>}
+        {!historyLoading && !historyError && history.length === 0 && <p className="text-xs text-slate-500 mt-3">No process trend evidence has been collected for this endpoint.</p>}
+        {!historyLoading && !historyError && history.length > 0 && <div className="mt-3 overflow-x-auto"><table className="w-full text-xs"><thead><tr className="text-left text-slate-500 border-b border-slate-800"><th className="py-2 pr-3 font-medium">Bucket</th><th className="py-2 pr-3 font-medium">Processes</th><th className="py-2 pr-3 font-medium">Avg CPU</th><th className="py-2 font-medium">Max RAM</th></tr></thead><tbody>{history.slice(-8).map((bucket) => <tr key={bucket.bucketStart} className="border-b border-slate-900 text-slate-300"><td className="py-2 pr-3 font-mono">{new Date(bucket.bucketStart).toLocaleString()}</td><td className="py-2 pr-3">{bucket.processCount}</td><td className="py-2 pr-3">{bucket.averageCPUPercent == null ? 'Unavailable' : `${bucket.averageCPUPercent.toFixed(1)}%`}</td><td className="py-2">{bucket.maxWorkingSet == null ? 'Unavailable' : `${Math.round(bucket.maxWorkingSet)} MB`}</td></tr>)}</tbody></table></div>}
+      </section>
     </div>
   );
 }

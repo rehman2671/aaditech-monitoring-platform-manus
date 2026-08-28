@@ -3,10 +3,11 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AnalystPanel from './AnalystPanel';
-import { fetchLatestEndpointAnalyst, runEndpointAnalyst } from '@/lib/sentinelApi';
+import { fetchLatestEndpointAnalyst, fetchProcessHistory, runEndpointAnalyst } from '@/lib/sentinelApi';
 
 vi.mock('@/lib/sentinelApi', () => ({
   fetchLatestEndpointAnalyst: vi.fn(),
+  fetchProcessHistory: vi.fn(),
   runEndpointAnalyst: vi.fn(),
 }));
 
@@ -43,5 +44,13 @@ describe('AnalystPanel', () => {
     render(<AnalystPanel endpointId="endpoint-1" />);
     fireEvent.click(screen.getByRole('button', { name: 'Load cached' }));
     await waitFor(() => expect(screen.getByText(/No analyst result loaded\./)).toBeTruthy());
+  });
+
+  it('renders tenant-scoped process trend buckets without inventing missing metrics', async () => {
+    vi.mocked(fetchProcessHistory).mockResolvedValueOnce([{ bucketStart: '2026-08-28T09:00:00Z', processCount: 3, averageCPUPercent: 12.5, maxWorkingSet: null }]);
+    render(<AnalystPanel endpointId="endpoint-1" />);
+    await waitFor(() => expect(screen.getByText('Process performance trend')).toBeTruthy());
+    expect(screen.getByText('12.5%')).toBeTruthy();
+    expect(screen.getByText('Unavailable')).toBeTruthy();
   });
 });

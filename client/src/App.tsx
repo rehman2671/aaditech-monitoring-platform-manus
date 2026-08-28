@@ -84,7 +84,7 @@ export default function App() {
   }, [setupComplete, session]);
 
   useEffect(() => {
-    if (!endpointQuery.data) return;
+    if (!endpointQuery.data || (session && endpointQuery.data.length === 0)) return;
     setEndpoints(prev => endpointQuery.data.map(record => {
       const fallback = prev.find(endpoint => endpoint.id === record.id);
       const candidate = record as typeof record & Partial<Endpoint> & { status_reason?: string; status_changed_at?: string; extendedHardware?: Endpoint['hardware']; extendedDisks?: Endpoint['disks']; metadata?: Endpoint['metadata'] };
@@ -116,7 +116,18 @@ export default function App() {
         metricsHistory: candidate.metricsHistory ?? fallback?.metricsHistory ?? [],
       };
     }));
-  }, [endpointQuery.data]);
+  }, [endpointQuery.data, session]);
+
+  useEffect(() => {
+    if (!session?.accessToken) return;
+    let cancelled = false;
+    void api.endpoints(session.accessToken).then(records => {
+      if (!cancelled) setEndpoints(records);
+    }).catch(() => {
+      // Keep the last known local state; the backend error is surfaced by the page-level evidence state.
+    });
+    return () => { cancelled = true; };
+  }, [session?.accessToken]);
 
   useEffect(() => {
     if (!alertRulesQuery.data) return;
