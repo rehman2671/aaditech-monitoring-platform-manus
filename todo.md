@@ -202,8 +202,8 @@
 
 - [x] Make the primary release action explicitly named **Compile MSI** and keep the flow focused on generating a versioned MSI directly from the platform; UI label verified with the complete 40-test suite.
 - [x] Provide the generated MSI as the primary download, with SHA-256 manifest and optional helper/verification artifacts grouped as secondary downloads; MSI and `.sha256` manifest are tenant-scoped and the manifest is a secondary action beside succeeded builds.
-- [ ] Ensure release status clearly distinguishes queued, building, succeeded, failed, unsigned test, and trusted-signed states without exposing signing secrets.
-- [ ] Add regression coverage for the simplified MSI release UI and verify production build/checkpoint.
+- [x] Ensure release status clearly distinguishes queued, building, succeeded, failed, unsigned test, and trusted-signed states without exposing signing secrets; labels are explicit and covered by regression tests.
+- [x] Add regression coverage for the simplified MSI release UI and verify production build/checkpoint; status-label contract is covered and checkpointed with TypeScript plus 47 passing tests.
 
 - [ ] Add explicit backend/UI lifecycle states `ENROLLMENT_FAILED`, `AUTH_ERROR`, and `DISABLED` with truthful reason and timestamp fields; preserve tenant isolation and avoid treating failed enrollment/auth as offline or online.
 
