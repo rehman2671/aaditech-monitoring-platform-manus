@@ -282,12 +282,16 @@ func (h *MSIBuildHandler) Detail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jobID := parts[0]
-	if len(parts) == 2 && parts[1] == "download" {
+	if len(parts) == 2 && (parts[1] == "download" || parts[1] == "manifest") {
 		if r.Method != http.MethodGet {
 			methodNotAllowed(w)
 			return
 		}
-		h.download(w, r, jobID)
+		if parts[1] == "download" {
+			h.download(w, r, jobID)
+		} else {
+			h.downloadManifest(w, r, jobID)
+		}
 		return
 	}
 	if len(parts) != 1 || r.Method != http.MethodGet {
@@ -352,6 +356,43 @@ func (h *MSIBuildHandler) DownloadLatest(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, newestName))
 	http.ServeContent(w, r, newestName, newest.ModTime(), file)
+}
+
+func (h *MSIBuildHandler) downloadManifest(w http.ResponseWriter, r *http.Request, jobID string) {
+	claims := claimsFromRequest(r)
+	job, err := h.getBuild(r, jobID, claims.OrganizationID)
+	if errors.Is(err, sql.ErrNoRows) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, "Failed to read MSI build", http.StatusInternalServerError)
+		return
+	}
+	if job.Status != "succeeded" || job.ChecksumFilename == nil {
+		http.Error(w, "MSI checksum manifest is not available", http.StatusConflict)
+		return
+	}
+	filename := filepath.Base(*job.ChecksumFilename)
+	if filename != *job.ChecksumFilename || !strings.HasSuffix(strings.ToLower(filename), ".sha256") {
+		http.Error(w, "Invalid checksum filename", http.StatusInternalServerError)
+		return
+	}
+	path := filepath.Join(h.artifactDir, filename)
+	file, err := os.Open(path)
+	if err != nil {
+		http.Error(w, "MSI checksum manifest is not present on the Windows host", http.StatusNotFound)
+		return
+	}
+	defer file.Close()
+	stat, err := file.Stat()
+	if err != nil {
+		http.Error(w, "Failed to inspect MSI checksum manifest", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	http.ServeContent(w, r, filename, stat.ModTime(), file)
 }
 
 func (h *MSIBuildHandler) download(w http.ResponseWriter, r *http.Request, jobID string) {

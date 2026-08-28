@@ -198,6 +198,27 @@ export const api = {
     anchor.remove();
     URL.revokeObjectURL(url);
   },
+  downloadMSIManifest: async (token: string, jobId: string) => {
+    const response = await fetch(`${API_BASE_URL}/admin/msi-builds/${encodeURIComponent(jobId)}/manifest`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      const message = await response.text();
+      throw new ApiError(response.status, { error: { code: 'MSI_MANIFEST_DOWNLOAD_FAILED', message: message || response.statusText } });
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || 'SentinelPulseAgent.sha256';
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  },
   downloadLatestMSI: async (token: string) => {
     const response = await fetch(`${API_BASE_URL}/admin/msi-latest/download`, {
       headers: { Authorization: `Bearer ${token}` },
