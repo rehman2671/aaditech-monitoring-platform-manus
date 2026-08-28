@@ -173,9 +173,9 @@
 
 - [x] Extend the Windows agent telemetry payload with truthful WMI-backed RAM module speed/slot/form-factor and per-adapter GPU dedicated/shared-memory evidence; bound Release build passes with zero warnings/errors.
 
-- [ ] Reconcile the local Windows service artifact with the current agent build; prove the installed executable version and MSI version match before claiming local deployment validation.
+- [x] Reconcile the local Windows service artifact with the current agent build; MSI 2.4.36 installed with executable version 2.4.36.0 and service Running/Automatic.
 
-- [ ] Set the Windows agent assembly/file/product version from the same release version used by MSI generation and add a parity check so installed executable metadata cannot remain 1.0.0.
+- [x] Set the Windows agent assembly/file/product version from the same release version used by MSI generation and add a parity check; observed 2.4.36.0/2.4.36 metadata matches the MSI release.
 
 - [x] Wire AgentSemVer into .NET publish metadata and verify a bound Windows publish produces FileVersion/ProductVersion 2.4.18.0/2.4.18 instead of 1.0.0.
 
@@ -213,4 +213,6 @@
 
 - [x] Render `pending`, `enrollment_failed`, `auth_error`, and `disabled` with distinct evidence-safe endpoint status labels and colors; endpoint-detail regression coverage passes.
 
-- [ ] Refresh SENTINELPULSE_P0_ACCEPTANCE_STATUS.md with the latest 51 frontend/server tests, authentication/configuration coverage, MSI manifest/status coverage, and tenant-bound enrollment failure semantics.
+- [x] Refresh SENTINELPULSE_P0_ACCEPTANCE_STATUS.md with the latest 51 frontend/server tests, authentication/configuration coverage, MSI manifest/status coverage, and tenant-bound enrollment failure semantics.
+
+- [x] Add and verify an automated Windows parity check that reads the MSI release version from its filename, reads installed EXE FileVersion/ProductVersion, rejects 1.0.0 or mismatches, and records a successful 2.4.36 result; connected endpoint returned `Result: PASS`, FileVersion `2.4.36.0`, ProductVersion `2.4.36`.
