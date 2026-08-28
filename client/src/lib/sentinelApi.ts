@@ -122,10 +122,37 @@ export interface AnalystResponse {
   assessment: AnalystAssessmentItem;
 }
 
+async function refreshLocalAccessToken(): Promise<string | undefined> {
+  try {
+    const response = await fetch('/api/v1/auth/refresh', { method: 'POST', credentials: 'include' });
+    if (!response.ok) return undefined;
+    const payload = await response.json() as { accessToken?: string };
+    return payload.accessToken?.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function authenticatedFetch(path: string, init: RequestInit = {}, accessToken?: string): Promise<Response> {
+  const request = async (token?: string) => {
+    const headers = new Headers(init.headers);
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    return fetch(path, { ...init, headers, credentials: 'include' });
+  };
+  let token = accessToken?.trim() || undefined;
+  if (!token) token = await refreshLocalAccessToken();
+  let response = await request(token);
+  if (response.status === 401) {
+    const refreshed = await refreshLocalAccessToken();
+    if (refreshed && refreshed !== token) response = await request(refreshed);
+  }
+  return response;
+}
+
 export async function runEndpointAnalyst(endpointId: string, token?: string): Promise<AnalystResponse> {
   const headers: HeadersInit = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`/api/v1/endpoints/${encodeURIComponent(endpointId)}/analyst`, { method: 'POST', headers });
+  const res = await authenticatedFetch(`/api/v1/endpoints/${encodeURIComponent(endpointId)}/analyst`, { method: 'POST', headers }, token);
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error(data?.error || data?.reason || `Analyst request failed: ${res.statusText}`);
   return data as AnalystResponse;
@@ -134,7 +161,7 @@ export async function runEndpointAnalyst(endpointId: string, token?: string): Pr
 export async function fetchLatestEndpointAnalyst(endpointId: string, token?: string): Promise<AnalystResponse> {
   const headers: HeadersInit = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`/api/v1/endpoints/${encodeURIComponent(endpointId)}/analyst/latest`, { headers });
+  const res = await authenticatedFetch(`/api/v1/endpoints/${encodeURIComponent(endpointId)}/analyst/latest`, { headers }, token);
   if (res.status === 404) throw new Error('No cached analyst assessment is available');
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error(data?.error || `Cached analyst request failed: ${res.statusText}`);

@@ -31,8 +31,15 @@ func RunMigrations(db *sql.DB) error {
 		filepath.Join("migrations", "007_analyst_assessments.sql"),
 	}
 	for index := range migrationPaths {
-		if _, err := os.Stat(migrationPaths[index]); os.IsNotExist(err) {
-			migrationPaths[index] = filepath.Join("backend", "go", migrationPaths[index])
+		if _, err := os.Stat(migrationPaths[index]); err == nil {
+			continue
+		}
+		localPath := filepath.Join("backend", "go", migrationPaths[index])
+		containerPath := filepath.Join("/migrations", filepath.Base(migrationPaths[index]))
+		if _, err := os.Stat(localPath); err == nil {
+			migrationPaths[index] = localPath
+		} else if _, err := os.Stat(containerPath); err == nil {
+			migrationPaths[index] = containerPath
 		}
 	}
 

@@ -73,6 +73,17 @@ export default function App() {
   }, [setupComplete]);
 
   useEffect(() => {
+    if (setupComplete !== true || session) return;
+    let cancelled = false;
+    void api.refresh().then(nextSession => {
+      if (!cancelled) setSession(nextSession);
+    }).catch(() => {
+      // No refresh cookie means the operator must sign in; do not loop or erase setup state.
+    });
+    return () => { cancelled = true; };
+  }, [setupComplete, session]);
+
+  useEffect(() => {
     if (!endpointQuery.data) return;
     setEndpoints(prev => endpointQuery.data.map(record => {
       const fallback = prev.find(endpoint => endpoint.id === record.id);
@@ -321,7 +332,7 @@ export default function App() {
                 <Switch>
                   <Route path="/"><DashboardOverview endpoints={shell.endpoints} alerts={shell.systemAlerts} onAcknowledgeAlert={handleAcknowledgeAlert} /></Route>
                   <Route path="/endpoints"><EndpointsList endpoints={shell.endpoints} searchQuery={searchQuery} onSearchChange={setSearchQuery} /></Route>
-                  <Route path="/endpoints/:id"><EndpointDetail endpoints={shell.endpoints} onTriggerOnDemandRefresh={handleTriggerOnDemandRefresh} /></Route>
+                  <Route path="/endpoints/:id"><EndpointDetail endpoints={shell.endpoints} onTriggerOnDemandRefresh={handleTriggerOnDemandRefresh} accessToken={session.accessToken} /></Route>
                   <Route path="/alerts"><AlertsCenter alertRules={shell.alertRules} systemAlerts={shell.systemAlerts} onToggleRule={handleToggleRule} onAcknowledgeAlert={handleAcknowledgeAlert} canWrite={shell.isAdmin} /></Route>
                   <Route path="/alert-rules" component={AlertRules} />
                   <Route path="/tokens"><EnrollmentTokens tokens={shell.tokens} onCreateToken={handleCreateToken} canWrite={shell.isAdmin} accessToken={session.accessToken} /></Route>

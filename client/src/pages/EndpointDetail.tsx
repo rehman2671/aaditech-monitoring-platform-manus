@@ -32,9 +32,10 @@ import { useAuth } from '@/_core/hooks/useAuth';
 interface EndpointDetailProps {
   endpoints: Endpoint[];
   onTriggerOnDemandRefresh: (endpointId: string) => void | Promise<void>;
+  accessToken?: string;
 }
 
-export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: EndpointDetailProps) {
+export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh, accessToken }: EndpointDetailProps) {
   const [, params] = useRoute('/endpoints/:id');
   const endpointId = params?.id;
 
@@ -454,7 +455,7 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
           </div>
         </TabsContent>
         <TabsContent value="analyst" className="space-y-6">
-          <AnalystPanel endpointId={endpoint.id} />
+          <AnalystPanel endpointId={endpoint.id} accessToken={accessToken} />
         </TabsContent>
       </Tabs>
     </div>

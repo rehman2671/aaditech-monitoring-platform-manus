@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -208,6 +209,7 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			log.Printf("[Auth] missing bearer path=%s method=%s", r.URL.Path, r.Method)
 			http.Error(w, "Unauthorized: missing bearer token", http.StatusUnauthorized)
 			return
 		}
@@ -221,6 +223,7 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 			claims, err = auth.ValidateToken(tokenStr, s.cfg.JwtSecret)
 		}
 		if err != nil {
+			log.Printf("[Auth] invalid bearer path=%s method=%s err=%v", r.URL.Path, r.Method, err)
 			http.Error(w, "Unauthorized: invalid token", http.StatusUnauthorized)
 			return
 		}

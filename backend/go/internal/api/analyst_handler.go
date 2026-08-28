@@ -69,7 +69,7 @@ func (h *AnalystHandler) Latest(w http.ResponseWriter, r *http.Request, claims *
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"evidence_hash": evidenceHash, "provider": provider, "model": model,
 		"generated_at": generatedAt.UTC(), "available": available,
-		"unavailable_reason": nullableString(unavailableReason), "assessment": assessment,
+		"unavailable_reason": analystNullableString(unavailableReason), "assessment": assessment,
 	})
 }
 
@@ -162,7 +162,7 @@ func (h *AnalystHandler) buildSnapshot(r *http.Request, tenantID, endpointID str
 
 	snapshot := analystSnapshot{EndpointID: endpointID, Evidence: []analystEvidence{
 		{ID: "endpoint.identity", Source: "endpoints", Availability: "OBSERVED", Value: map[string]interface{}{"hostname": hostname}},
-		{ID: "endpoint.lifecycle", Source: "endpoints", Availability: "OBSERVED", CapturedAt: nullableTime(lastSeen), Value: map[string]interface{}{"status": status, "status_reason": nullableString(statusReason)}},
+		{ID: "endpoint.lifecycle", Source: "endpoints", Availability: "OBSERVED", CapturedAt: nullableTime(lastSeen), Value: map[string]interface{}{"status": status, "status_reason": analystNullableString(statusReason)}},
 	}}
 
 	var capturedAt time.Time
@@ -217,7 +217,7 @@ func (h *AnalystHandler) buildSnapshot(r *http.Request, tenantID, endpointID str
 			Source: "endpoint_process_samples", CapturedAt: timePtr(processCapturedAt.UTC()),
 			Availability: valueOr(availability, "UNKNOWN"),
 			Value: map[string]interface{}{
-				"pid": pid, "name": name, "executable_path": nullableString(executablePath), "signature": nullableString(signature),
+				"pid": pid, "name": name, "executable_path": analystNullableString(executablePath), "signature": analystNullableString(signature),
 				"cpu_percent": nullableFloat(cpuPercent), "working_set_bytes": nullableInt64(workingSet),
 			},
 		})
@@ -241,7 +241,7 @@ func nullableTime(value sql.NullTime) *time.Time {
 	return timePtr(value.Time.UTC())
 }
 func timePtr(value time.Time) *time.Time { return &value }
-func nullableString(value sql.NullString) interface{} {
+func analystNullableString(value sql.NullString) interface{} {
 	if !value.Valid {
 		return nil
 	}

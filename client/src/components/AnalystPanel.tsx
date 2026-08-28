@@ -8,20 +8,20 @@ import {
   runEndpointAnalyst,
 } from '@/lib/sentinelApi';
 
-type AnalystPanelProps = { endpointId: string };
+type AnalystPanelProps = { endpointId: string; accessToken?: string };
 
 function safeArray<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [];
 }
 
-export default function AnalystPanel({ endpointId }: AnalystPanelProps) {
+export default function AnalystPanel({ endpointId, accessToken }: AnalystPanelProps) {
   const [result, setResult] = useState<AnalystResponse | null>(null);
   const [busy, setBusy] = useState(false);
 
   const runAnalysis = async () => {
     setBusy(true);
     try {
-      setResult(await runEndpointAnalyst(endpointId));
+      setResult(await runEndpointAnalyst(endpointId, accessToken));
       toast.success('Analyst snapshot complete');
     } catch (error) {
       toast.error('Analyst analysis unavailable', { description: error instanceof Error ? error.message : 'Request failed' });
@@ -33,7 +33,7 @@ export default function AnalystPanel({ endpointId }: AnalystPanelProps) {
   const loadCached = async () => {
     setBusy(true);
     try {
-      setResult(await fetchLatestEndpointAnalyst(endpointId));
+      setResult(await fetchLatestEndpointAnalyst(endpointId, accessToken));
     } catch (error) {
       toast.error('No cached analyst result', { description: error instanceof Error ? error.message : 'Request failed' });
     } finally {
