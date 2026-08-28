@@ -133,3 +133,18 @@ func TestEnrollmentTokenFormat(t *testing.T) {
 		}
 	}
 }
+
+func TestHashTokenIsDeterministicAndNonPlaintext(t *testing.T) {
+	raw := "sp-enrol-11111111-1111-1111-1111-111111111111"
+	first := hashToken(raw)
+	second := hashToken(raw)
+	if first != second {
+		t.Fatal("expected token hashing to be deterministic")
+	}
+	if first == raw || len(first) != 64 {
+		t.Fatalf("expected a 64-character SHA-256 digest, got %q", first)
+	}
+	if hashToken(raw+"-different") == first {
+		t.Fatal("expected different enrollment secrets to produce different digests")
+	}
+}
