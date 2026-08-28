@@ -36,6 +36,43 @@ type analystSnapshot struct {
 	Evidence   []analystEvidence `json:"evidence"`
 }
 
+func (h *AnalystHandler) Latest(w http.ResponseWriter, r *http.Request, claims *auth.Claims, endpointID string) {
+	if r.Method != http.MethodGet || claims == nil || strings.TrimSpace(claims.OrganizationID) == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var evidenceHash, provider, model string
+	var generatedAt time.Time
+	var available bool
+	var unavailableReason sql.NullString
+	var assessmentJSON []byte
+	err := h.db.QueryRowContext(r.Context(), `
+		SELECT evidence_hash, provider, model, generated_at, available, unavailable_reason, assessment_json
+		FROM analyst_assessments
+		WHERE tenant_id = $1 AND endpoint_id = $2
+		ORDER BY generated_at DESC
+		LIMIT 1
+	`, claims.OrganizationID, endpointID).Scan(&evidenceHash, &provider, &model, &generatedAt, &available, &unavailableReason, &assessmentJSON)
+	if err == sql.ErrNoRows {
+		http.Error(w, "No analyst assessment available", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, "Failed to read analyst assessment", http.StatusInternalServerError)
+		return
+	}
+	var assessment interface{}
+	if len(assessmentJSON) > 0 && json.Valid(assessmentJSON) {
+		assessment = json.RawMessage(assessmentJSON)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"evidence_hash": evidenceHash, "provider": provider, "model": model,
+		"generated_at": generatedAt.UTC(), "available": available,
+		"unavailable_reason": nullableString(unavailableReason), "assessment": assessment,
+	})
+}
+
 func (h *AnalystHandler) Analyze(w http.ResponseWriter, r *http.Request, claims *auth.Claims, endpointID string) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

@@ -226,7 +226,7 @@
 - [ ] Implement confidence-aware application grouping plus separate application and process views.
 - [ ] Implement deterministic CPU/RAM/storage/battery/hardware intelligence and threshold-based findings without LLM-owned metrics; CPU/RAM/disk threshold observations and explicit missing-metric findings are implemented, while battery/hardware and multi-sample persistence remain.
 - [ ] Implement normalized event, driver, SFC/DISM, software, remote-access, and correlation findings with evidence and remediation boundaries; same-window CPU/RAM resource-pressure correlation is implemented conservatively, while cross-domain evidence normalization remains.
-- [x] Integrate local Ollama as an optional, timeout-bounded analysis layer that receives server-built summaries only and cannot invent or persist authoritative metrics; async queueing, assessment caching, and frontend presentation remain separate follow-up work.
+- [x] Integrate local Ollama as an optional, timeout-bounded analysis layer that receives server-built summaries only and cannot invent or persist authoritative metrics; validated assessments are now cached and retrievable by tenant/evidence hash, while async queueing and frontend presentation remain separate follow-up work.
 - [ ] Add detailed endpoint intelligence report models and tenant-scoped JSON/CSV/PDF export coverage; validated Ollama assessment persistence is now keyed by tenant, endpoint, and evidence hash, while full report/export snapshots remain.
 - [ ] Add analyst frontend views, finding details, evidence/provenance, confidence, recommendations, and explicit no-action states.
 - [ ] Add security, tenant-isolation, privacy minimization, retention, rate limits, auditability, and Ollama failure fallbacks.

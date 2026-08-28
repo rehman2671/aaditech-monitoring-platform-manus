@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/sentinelpulse/backend/internal/auth"
@@ -145,6 +146,31 @@ func TestAnalystHandlerPersistsValidatedAssessmentForTenant(t *testing.T) {
 	handler.Analyze(resp, req, &auth.Claims{OrganizationID: "tenant-1"}, "endpoint-1")
 	if resp.Code != http.StatusOK || !strings.Contains(resp.Body.String(), `"persisted":true`) {
 		t.Fatalf("expected persisted analyst response, got %d: %s", resp.Code, resp.Body.String())
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAnalystHandlerReadsLatestAssessmentForTenant(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	generated := time.Unix(100, 0).UTC()
+	assessmentJSON := []byte(`{"summary":"review","available":true}`)
+	mock.ExpectQuery(`SELECT evidence_hash, provider, model, generated_at, available, unavailable_reason, assessment_json`).
+		WithArgs("tenant-1", "endpoint-1").
+		WillReturnRows(sqlmock.NewRows([]string{"evidence_hash", "provider", "model", "generated_at", "available", "unavailable_reason", "assessment_json"}).
+			AddRow("hash-1", "ollama", "qwen3:1.7b", generated, true, nil, assessmentJSON))
+
+	handler := NewAnalystHandler(db, nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/endpoints/endpoint-1/analyst/latest", nil)
+	resp := httptest.NewRecorder()
+	handler.Latest(resp, req, &auth.Claims{OrganizationID: "tenant-1"}, "endpoint-1")
+	if resp.Code != http.StatusOK || !strings.Contains(resp.Body.String(), `"evidence_hash":"hash-1"`) || !strings.Contains(resp.Body.String(), `"available":true`) {
+		t.Fatalf("expected latest cached assessment, got %d: %s", resp.Code, resp.Body.String())
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatal(err)

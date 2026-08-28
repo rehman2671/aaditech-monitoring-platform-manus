@@ -113,10 +113,15 @@ func (s *Server) RegisterRoutes() http.Handler {
 			api.HandleEndpointCommand(s.db)(w, r)
 			return
 		}
+		prefix := "/api/v1/endpoints/"
+		claims := r.Context().Value("claims").(*auth.Claims)
+		if strings.HasSuffix(r.URL.Path, "/analyst/latest") && r.Method == http.MethodGet {
+			endpointID := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, prefix), "/analyst/latest")
+			analystHandler.Latest(w, r, claims, endpointID)
+			return
+		}
 		if strings.HasSuffix(r.URL.Path, "/analyst") && r.Method == http.MethodPost {
-			prefix := "/api/v1/endpoints/"
 			endpointID := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, prefix), "/analyst")
-			claims := r.Context().Value("claims").(*auth.Claims)
 			analystHandler.Analyze(w, r, claims, endpointID)
 			return
 		}
