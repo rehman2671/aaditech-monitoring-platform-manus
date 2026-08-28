@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Endpoint } from '../types';
+import { Endpoint, EndpointStatus } from '../types';
+
+export const endpointLifecyclePresentation = (status: EndpointStatus) => {
+  if (status === 'online') return { label: 'ONLINE', tone: 'online' as const };
+  if (status === 'pending') return { label: 'PENDING EVIDENCE', tone: 'pending' as const };
+  if (status === 'enrollment_failed') return { label: 'ENROLLMENT FAILED', tone: 'error' as const };
+  if (status === 'auth_error') return { label: 'AUTH ERROR', tone: 'error' as const };
+  if (status === 'disabled') return { label: 'DISABLED', tone: 'disabled' as const };
+  if (status === 'warning') return { label: 'WARNING', tone: 'warning' as const };
+  if (status === 'critical') return { label: 'CRITICAL', tone: 'error' as const };
+  return { label: 'OFFLINE', tone: 'offline' as const };
+};
 import { 
   ArrowLeft, 
   Server, 
@@ -100,6 +111,10 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
     );
   }
 
+  const lifecycle = endpointLifecyclePresentation(endpoint.status);
+  const lifecycleTone = lifecycle.tone === 'online' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : lifecycle.tone === 'warning' || lifecycle.tone === 'pending' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : lifecycle.tone === 'disabled' ? 'bg-slate-500/15 text-slate-300 border border-slate-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30';
+  const lifecycleDot = lifecycle.tone === 'online' ? 'bg-emerald-400 animate-pulse' : lifecycle.tone === 'warning' || lifecycle.tone === 'pending' ? 'bg-amber-400' : lifecycle.tone === 'disabled' ? 'bg-slate-400' : 'bg-rose-400';
+
   return (
     <div className="p-8 space-y-6 max-w-7xl mx-auto">
       {/* Top Navigation & Actions */}
@@ -113,13 +128,9 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
           <div>
             <div className="flex items-center gap-3">
               <h2 className="text-2xl font-extrabold text-white font-mono tracking-tight">{endpoint.hostname}</h2>
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium font-mono ${
-                endpoint.status === 'online' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' :
-                endpoint.status === 'warning' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' :
-                'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${endpoint.status === 'online' ? 'bg-emerald-400 animate-pulse' : endpoint.status === 'warning' ? 'bg-amber-400' : 'bg-rose-400'}`}></span>
-                {endpoint.status.toUpperCase()}
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium font-mono ${lifecycleTone}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${lifecycleDot}`}></span>
+                {lifecycle.label}
               </span>
             </div>
             <p className="text-xs text-slate-400 font-mono mt-0.5">

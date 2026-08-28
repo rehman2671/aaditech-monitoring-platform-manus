@@ -210,3 +210,5 @@
 - [x] Diagnose and fix post-setup login rejection when the same setup username/password redirects to `/login`; preserve browser state, verify setup persistence, and add regression coverage for the setup-to-login contract. Preview-vs-local runtime mismatch is documented; exact setup email persistence is covered by a passing regression test, and local Docker login/session was verified live.
 - [x] Capture login failure evidence: confirmed from browser network logs that POST `/api/v1/auth/login` on the `3000-...manus.computer` Preview URL returns HTTP 200 with the 368 KB SPA HTML, not an authentication JSON response; the preview is not connected to the local Docker/Go auth runtime.
 - [x] Verify the authenticated local Docker path after the Preview failure: `http://localhost:3001/login` accepted the setup account and opened `/endpoints/DESKTOP-1E02MC9` for `aziz.shaikh` as ADMIN; live endpoint data is visible, and automated setup-to-login regression coverage now passes.
+
+- [ ] Render `pending`, `enrollment_failed`, `auth_error`, and `disabled` with distinct evidence-safe endpoint status labels and colors; do not show them as generic offline/critical.

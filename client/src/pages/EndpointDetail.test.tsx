@@ -3,7 +3,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { Router } from 'wouter';
 import { describe, expect, it, vi } from 'vitest';
-import EndpointDetail from './EndpointDetail';
+import EndpointDetail, { endpointLifecyclePresentation } from './EndpointDetail';
 import type { Endpoint } from '@/types';
 
 class ResizeObserverStub {
@@ -41,6 +41,17 @@ function endpointWithUnavailableEvidence(): Endpoint {
     software: [], processes: [], eventLogs: [], metricsHistory: [],
   };
 }
+
+describe('Endpoint lifecycle presentation', () => {
+  it.each([
+    ['pending', 'PENDING EVIDENCE'],
+    ['enrollment_failed', 'ENROLLMENT FAILED'],
+    ['auth_error', 'AUTH ERROR'],
+    ['disabled', 'DISABLED'],
+  ] as const)('keeps %s explicit', (status, label) => {
+    expect(endpointLifecyclePresentation(status)).toMatchObject({ label });
+  });
+});
 
 describe('EndpointDetail unavailable evidence', () => {
   it('renders missing RAM, CPU, driver, and reliability evidence as unavailable', () => {
