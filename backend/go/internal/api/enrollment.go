@@ -114,11 +114,13 @@ func (h *EnrollmentHandler) EnrollAgent(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if consumedAt.Valid {
+		_, _ = tx.ExecContext(r.Context(), `UPDATE endpoints SET status = 'enrollment_failed', status_reason = 'Enrollment token already consumed', status_changed_at = NOW() WHERE id = $1 AND tenant_id = $2`, req.EndpointID, tenantID)
 		http.Error(w, "Enrollment token already consumed", http.StatusUnauthorized)
 		return
 	}
 
 	if time.Now().After(expiresAt) {
+		_, _ = tx.ExecContext(r.Context(), `UPDATE endpoints SET status = 'enrollment_failed', status_reason = 'Enrollment token expired', status_changed_at = NOW() WHERE id = $1 AND tenant_id = $2`, req.EndpointID, tenantID)
 		http.Error(w, "Enrollment token expired", http.StatusUnauthorized)
 		return
 	}
