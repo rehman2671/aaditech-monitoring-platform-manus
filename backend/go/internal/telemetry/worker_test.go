@@ -39,7 +39,7 @@ func TestWorkerPersistsRealMetricsAndTenant(t *testing.T) {
 	insert := mock.ExpectExec("INSERT INTO endpoint_metrics_hyper")
 	insert.WithArgs("tenant-1", "endpoint-1", sqlmock.AnyArg(), 12.5, 67.25, 41.75, payload)
 	insert.WillReturnResult(sqlmock.NewResult(1, 1))
-	update := mock.ExpectExec("UPDATE endpoints")
+	update := mock.ExpectExec(`(?s)UPDATE endpoints.*status_reason.*status_changed_at.*last_seen`)
 	update.WithArgs("endpoint-1", "tenant-1", sqlmock.AnyArg())
 	update.WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
