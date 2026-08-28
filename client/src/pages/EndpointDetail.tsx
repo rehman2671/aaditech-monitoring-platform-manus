@@ -16,7 +16,8 @@ import {
   Clock, 
   FileText,
   Layers,
-  Database
+  Database,
+  BrainCircuit
 } from 'lucide-react';
 import { Link, useRoute } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { toast } from 'sonner';
 import ExtendedTelemetryPanel from '@/components/ExtendedTelemetryPanel';
+import AnalystPanel from '@/components/AnalystPanel';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 
@@ -165,6 +167,9 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
           </TabsTrigger>
           <TabsTrigger value="logs" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-400 text-xs px-4 py-2 rounded-xl font-medium">
             Event Viewer Logs ({endpoint.eventLogs.length})
+          </TabsTrigger>
+          <TabsTrigger value="analyst" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-400 text-xs px-4 py-2 rounded-xl font-medium">
+            <BrainCircuit className="w-3.5 h-3.5 mr-1.5" /> AI Analyst
           </TabsTrigger>
         </TabsList>
 
@@ -447,6 +452,9 @@ export default function EndpointDetail({ endpoints, onTriggerOnDemandRefresh }: 
               )}
             </div>
           </div>
+        </TabsContent>
+        <TabsContent value="analyst" className="space-y-6">
+          <AnalystPanel endpointId={endpoint.id} />
         </TabsContent>
       </Tabs>
     </div>
