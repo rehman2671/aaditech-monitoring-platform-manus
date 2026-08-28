@@ -70,19 +70,43 @@ func (h *AnalystHandler) Analyze(w http.ResponseWriter, r *http.Request, claims 
 	for _, evidence := range snapshot.Evidence {
 		evidenceIDs = append(evidenceIDs, evidence.ID)
 	}
+	evidenceHash := hex.EncodeToString(hash[:])
 	result := h.client.Analyze(r.Context(), ollama.Input{
 		EndpointID:      endpointID,
-		EvidenceHash:    hex.EncodeToString(hash[:]),
+		EvidenceHash:    evidenceHash,
 		EvidenceIDs:     evidenceIDs,
 		EvidenceSummary: string(summary),
 	})
+	persisted := false
+	if result.Available {
+		assessmentJSON, err := json.Marshal(result.Assessment)
+		if err != nil {
+			http.Error(w, "Failed to encode analyst assessment", http.StatusInternalServerError)
+			return
+		}
+		_, err = h.db.ExecContext(r.Context(), `
+			INSERT INTO analyst_assessments
+			(tenant_id, endpoint_id, evidence_hash, provider, model, generated_at, available, unavailable_reason, assessment_json)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			ON CONFLICT (tenant_id, endpoint_id, evidence_hash) DO UPDATE SET
+			provider = EXCLUDED.provider, model = EXCLUDED.model, generated_at = EXCLUDED.generated_at,
+			available = EXCLUDED.available, unavailable_reason = EXCLUDED.unavailable_reason, assessment_json = EXCLUDED.assessment_json
+		`, claims.OrganizationID, endpointID, evidenceHash, result.Assessment.Provider, result.Assessment.Model,
+			result.Assessment.GeneratedAt, result.Assessment.Available, result.Assessment.UnavailableReason, assessmentJSON)
+		if err != nil {
+			http.Error(w, "Failed to persist analyst assessment", http.StatusInternalServerError)
+			return
+		}
+		persisted = true
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"available":      result.Available,
 		"reason":         result.Reason,
-		"evidence_hash":  hex.EncodeToString(hash[:]),
+		"evidence_hash":  evidenceHash,
 		"evidence_count": len(snapshot.Evidence),
+		"persisted":      persisted,
 		"assessment":     result.Assessment,
 	})
 }

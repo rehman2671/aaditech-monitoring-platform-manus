@@ -84,3 +84,8 @@ Process history is bounded by `PROCESS_SAMPLE_RETENTION_DAYS`, defaulting to 30 
 The local analyst client is opt-in through `LLM_PROVIDER=ollama`. It accepts only local/private HTTP Ollama hosts, uses a bounded non-streaming request, sends only a compact summary inside `TELEMETRY_DATA` delimiters, validates structured JSON, rejects findings that reference unsupplied evidence IDs, and returns an explicit unavailable result on timeout, invalid output, disabled provider, or transport failure. The endpoint route is tenant-scoped and builds its snapshot from server-side endpoint, metric, and process rows; it never accepts an arbitrary caller-supplied evidence summary.
 
 The remaining work is intentional: downsampled history, deterministic threshold/correlation findings, analyst assessment persistence/cache, complete report/export surfaces, frontend views, and runtime acceptance against a live Docker/Timescale/Ollama stack remain open.
+
+
+The analyst route now persists only a successfully validated assessment in `analyst_assessments`, keyed by `(tenant_id, endpoint_id, evidence_hash)`. The cache stores the narrative JSON separately from authoritative measurements and is replaced only for the same tenant-scoped evidence hash. Disabled, timed-out, invalid, or reference-invalid Ollama responses are not persisted as successful assessments.
+
+The administrative retention action scopes both audit-log and process-sample deletion to the authenticated organization and exposes separate counts. The process worker also performs endpoint-scoped bounded cleanup in its transaction, so retention is enforced during normal ingestion as well as through the admin action.
