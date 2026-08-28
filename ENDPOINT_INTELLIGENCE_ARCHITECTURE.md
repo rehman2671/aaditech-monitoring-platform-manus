@@ -72,3 +72,15 @@ The safe order is: contract and migration design; deterministic process/history 
 ## 8. Explicit non-goals
 
 The Analyst layer will not execute process termination, file deletion, uninstall, service or registry changes, firewall changes, isolation, quarantine, restart, or destructive commands. It will not call missing fields zero, classify normal events as incidents, treat unsigned software alone as malware, or claim a leak/corruption/failure without sufficient evidence.
+
+## 9. Implemented foundation slice — 2026-08-28
+
+The first implementation slice is now present in the Go backend and remains additive. Rich process evidence is persisted in `endpoint_process_samples` only when the agent reports a successful process collector result. Supported fields are nullable, the raw payload is retained for provenance, and the primary key is tenant, endpoint, capture time, and PID. The Redis telemetry worker is wired into backend startup; accepted ingress messages are no longer left without a production consumer.
+
+Application aggregation is deterministic and confidence-aware. Known executable mappings group at high confidence, exact executable paths group at a lower explicit confidence, and unresolved processes remain separate by PID. No grouping is used as a malware verdict, and missing fields remain unavailable.
+
+Process history is bounded by `PROCESS_SAMPLE_RETENTION_DAYS`, defaulting to 30 days and rejecting values outside 1–3650 days. Cleanup is scoped by tenant and endpoint in the worker transaction. The admin retention route now scopes audit and process purges to the authenticated organization and reports each row count separately.
+
+The local analyst client is opt-in through `LLM_PROVIDER=ollama`. It accepts only local/private HTTP Ollama hosts, uses a bounded non-streaming request, sends only a compact summary inside `TELEMETRY_DATA` delimiters, validates structured JSON, rejects findings that reference unsupplied evidence IDs, and returns an explicit unavailable result on timeout, invalid output, disabled provider, or transport failure. The endpoint route is tenant-scoped and builds its snapshot from server-side endpoint, metric, and process rows; it never accepts an arbitrary caller-supplied evidence summary.
+
+The remaining work is intentional: downsampled history, deterministic threshold/correlation findings, analyst assessment persistence/cache, complete report/export surfaces, frontend views, and runtime acceptance against a live Docker/Timescale/Ollama stack remain open.

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"github.com/sentinelpulse/backend/internal/config"
 	custhttp "github.com/sentinelpulse/backend/internal/http"
 	"github.com/sentinelpulse/backend/internal/repository"
+	"github.com/sentinelpulse/backend/internal/telemetry"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -40,8 +42,13 @@ func main() {
 	}
 
 	rdb := newRedisClient(cfg.RedisUrl)
+	worker := telemetry.NewWorkerWithRetention(db, rdb, cfg.StreamName, cfg.ConsumerGroup, cfg.ConsumerName, cfg.ProcessRetentionDays)
+	go worker.Start(context.Background())
 
-	server := custhttp.NewServer(cfg, db, rdb)
+	server, err := custhttp.NewServerWithAnalyst(cfg, db, rdb)
+	if err != nil {
+		log.Fatalf("Analyst configuration error: %v", err)
+	}
 	handler := server.RegisterRoutes()
 
 	log.Printf("SentinelPulse Go canonical backend starting on port %s...", cfg.HttpPort)

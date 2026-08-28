@@ -47,6 +47,11 @@ services:
       - PORT=8080
       - MSI_ARTIFACT_DIR=/var/lib/sentinelpulse/artifacts
       - MSI_BUILDER_KEY=${MSI_BUILDER_KEY:-}
+      - PROCESS_SAMPLE_RETENTION_DAYS=${PROCESS_SAMPLE_RETENTION_DAYS:-30}
+      - LLM_PROVIDER=${LLM_PROVIDER:-disabled}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen3:1.7b}
+      - OLLAMA_TIMEOUT_MS=${OLLAMA_TIMEOUT_MS:-8000}
     volumes:
       - ../agent/artifacts:/var/lib/sentinelpulse/artifacts:ro
     ports:

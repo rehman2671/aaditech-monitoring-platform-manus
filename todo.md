@@ -222,12 +222,17 @@
 ## Endpoint Intelligence / AI Analyst integration — 2026-08-28
 - [x] Complete a no-change repository inspection and architecture inventory against the pasted Endpoint Intelligence requirements; architecture and compatibility boundaries recorded in ENDPOINT_INTELLIGENCE_ARCHITECTURE.md.
 - [x] Define additive tenant-scoped contracts for process samples, application aggregation, deterministic findings, evidence provenance, Ollama analyses, reports, exports, and retention/downsampling; Go contracts are additive, tenant IDs are JSON-redacted, unavailable evidence is explicit, and remediation confirmation is represented.
-- [ ] Implement bounded historical process performance telemetry with truthful unavailable fields and configurable retention.
+- [ ] Implement bounded historical process performance telemetry with truthful unavailable fields and configurable retention; the additive raw sample table, ingestion, and retention cleanup are complete, while downsampled 5-minute/15-minute/hour/day/week views remain.
 - [ ] Implement confidence-aware application grouping plus separate application and process views.
-- [ ] Implement deterministic CPU/RAM/storage/battery/hardware intelligence and threshold-based findings without LLM-owned metrics.
-- [ ] Implement normalized event, driver, SFC/DISM, software, remote-access, and correlation findings with evidence and remediation boundaries.
-- [ ] Integrate local Ollama as an optional, timeout-bounded analysis layer that receives summaries only and cannot invent or persist authoritative metrics.
+- [ ] Implement deterministic CPU/RAM/storage/battery/hardware intelligence and threshold-based findings without LLM-owned metrics; CPU/RAM/disk threshold observations and explicit missing-metric findings are implemented, while battery/hardware and multi-sample persistence remain.
+- [ ] Implement normalized event, driver, SFC/DISM, software, remote-access, and correlation findings with evidence and remediation boundaries; same-window CPU/RAM resource-pressure correlation is implemented conservatively, while cross-domain evidence normalization remains.
+- [x] Integrate local Ollama as an optional, timeout-bounded analysis layer that receives server-built summaries only and cannot invent or persist authoritative metrics; async queueing, assessment caching, and frontend presentation remain separate follow-up work.
 - [ ] Add detailed endpoint intelligence report models and tenant-scoped JSON/CSV/PDF export coverage.
 - [ ] Add analyst frontend views, finding details, evidence/provenance, confidence, recommendations, and explicit no-action states.
 - [ ] Add security, tenant-isolation, privacy minimization, retention, rate limits, auditability, and Ollama failure fallbacks.
 - [ ] Validate frontend/backend/agent regressions, Windows collection, Docker runtime, Ollama availability, and end-to-end acceptance from observed evidence only.
+- [x] Add a backward-compatible rich process evidence contract and deterministic application aggregation helper; unsupported process fields remain nullable, Windows Release build passes with 0 warnings/errors, and Go regressions pass.
+- [x] Implement deterministic confidence-aware process aggregation using exact executable identity or known application mappings; known executables group at high confidence, exact paths group at 0.90 confidence, and unresolved PIDs remain separate at 0.10 confidence with tests.
+- [x] Wire the Redis telemetry worker into the Go backend entrypoint; accepted telemetry now has a production consumer path instead of remaining queued indefinitely.
+- [x] Add bounded, configurable process-sample retention and admin-safe purge coverage without deleting authoritative recent evidence; defaults to 30 days, is capped at 3650 days, and purge predicates are tenant-scoped.
+- [x] Add a local-only Ollama client and tenant-scoped on-demand analyst route with bounded input/response sizes, 250-30000 ms timeout validation, structured JSON validation, evidence-reference enforcement, and truthful unavailable fallbacks.

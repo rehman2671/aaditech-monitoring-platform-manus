@@ -15,9 +15,11 @@ type RetentionRequest struct {
 }
 
 type RetentionResponse struct {
-	Status       string `json:"status"`
-	RowsAffected int64  `json:"rows_affected"`
-	DryRun       bool   `json:"dry_run"`
+	Status              string `json:"status"`
+	RowsAffected        int64  `json:"rows_affected"`
+	AuditRowsAffected   int64  `json:"audit_rows_affected"`
+	ProcessRowsAffected int64  `json:"process_rows_affected"`
+	DryRun              bool   `json:"dry_run"`
 }
 
 func HandleAdminRetentionPurge(db *sql.DB) http.HandlerFunc {
@@ -49,17 +51,24 @@ func HandleAdminRetentionPurge(db *sql.DB) http.HandlerFunc {
 			DryRun:        req.DryRun,
 		}
 
-		affected, err := repository.PurgeOldAuditLogs(r.Context(), db, policy)
+		auditAffected, err := repository.PurgeOldAuditLogs(r.Context(), db, claims.OrganizationID, policy)
 		if err != nil {
-			http.Error(w, "Failed to execute retention policy: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Failed to execute audit retention policy: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		processAffected, err := repository.PurgeOldProcessSamples(r.Context(), db, claims.OrganizationID, policy)
+		if err != nil {
+			http.Error(w, "Failed to execute process retention policy: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(RetentionResponse{
-			Status:       "success",
-			RowsAffected: affected,
-			DryRun:       policy.DryRun,
+			Status:              "success",
+			RowsAffected:        auditAffected + processAffected,
+			AuditRowsAffected:   auditAffected,
+			ProcessRowsAffected: processAffected,
+			DryRun:              policy.DryRun,
 		})
 	}
 }

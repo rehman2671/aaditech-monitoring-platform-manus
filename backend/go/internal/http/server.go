@@ -13,19 +13,40 @@ import (
 	"github.com/sentinelpulse/backend/internal/api"
 	"github.com/sentinelpulse/backend/internal/auth"
 	"github.com/sentinelpulse/backend/internal/config"
+	"github.com/sentinelpulse/backend/internal/ollama"
 	"github.com/sentinelpulse/backend/internal/telemetry"
 
 	"github.com/redis/go-redis/v9"
 )
 
 type Server struct {
-	cfg *config.Config
-	db  *sql.DB
-	rdb *redis.Client
+	cfg     *config.Config
+	db      *sql.DB
+	rdb     *redis.Client
+	analyst *ollama.Client
 }
 
 func NewServer(cfg *config.Config, db *sql.DB, rdb *redis.Client) *Server {
-	return &Server{cfg: cfg, db: db, rdb: rdb}
+	server, err := NewServerWithAnalyst(cfg, db, rdb)
+	if err != nil {
+		// Preserve the legacy constructor contract for tests and embedded callers;
+		// invalid analyst configuration is exposed as an unavailable AI layer.
+		return &Server{cfg: cfg, db: db, rdb: rdb}
+	}
+	return server
+}
+
+func NewServerWithAnalyst(cfg *config.Config, db *sql.DB, rdb *redis.Client) (*Server, error) {
+	client, err := ollama.NewClient(ollama.Config{
+		Provider: cfg.LLMProvider,
+		BaseURL:  cfg.OllamaBaseURL,
+		Model:    cfg.OllamaModel,
+		Timeout:  cfg.OllamaTimeout,
+	}, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &Server{cfg: cfg, db: db, rdb: rdb, analyst: client}, nil
 }
 
 func (s *Server) RegisterRoutes() http.Handler {
@@ -85,10 +106,18 @@ func (s *Server) RegisterRoutes() http.Handler {
 		endpointHandler.ListEndpoints(w, r, claims)
 	})))
 
-	// Endpoint Command Execution (Admin RBAC required)
+	// Endpoint Command Execution (Admin RBAC required) and local analyst.
+	analystHandler := api.NewAnalystHandler(s.db, s.analyst)
 	mux.Handle("/api/v1/endpoints/", s.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/command") && r.Method == http.MethodPost {
 			api.HandleEndpointCommand(s.db)(w, r)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/analyst") && r.Method == http.MethodPost {
+			prefix := "/api/v1/endpoints/"
+			endpointID := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, prefix), "/analyst")
+			claims := r.Context().Value("claims").(*auth.Claims)
+			analystHandler.Analyze(w, r, claims, endpointID)
 			return
 		}
 		http.NotFound(w, r)

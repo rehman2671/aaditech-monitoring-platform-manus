@@ -3,7 +3,9 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sentinelpulse/backend/internal/auth"
 )
@@ -23,8 +25,13 @@ type Config struct {
 	MaxPayloadBytes      int64
 	MSIArtifactDir       string
 	MSIBuilderKey        string
-	SigningCertPfxPath    string
-	SigningCertPassword   string
+	SigningCertPfxPath   string
+	SigningCertPassword  string
+	ProcessRetentionDays int
+	LLMProvider          string
+	OllamaBaseURL        string
+	OllamaModel          string
+	OllamaTimeout        time.Duration
 }
 
 func LoadConfig() (*Config, error) {
@@ -67,22 +74,52 @@ func LoadConfig() (*Config, error) {
 		artifactDir = "/var/lib/sentinelpulse/artifacts"
 	}
 
+	processRetentionDays := 30
+	if raw := strings.TrimSpace(os.Getenv("PROCESS_SAMPLE_RETENTION_DAYS")); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed < 1 || parsed > 3650 {
+			return nil, fmt.Errorf("FATAL: PROCESS_SAMPLE_RETENTION_DAYS must be an integer between 1 and 3650")
+		}
+		processRetentionDays = parsed
+	}
+
+	llmProvider := strings.ToLower(strings.TrimSpace(os.Getenv("LLM_PROVIDER")))
+	if llmProvider == "" {
+		llmProvider = "disabled"
+	}
+	if llmProvider != "disabled" && llmProvider != "ollama" {
+		return nil, fmt.Errorf("FATAL: LLM_PROVIDER must be disabled or ollama")
+	}
+	ollamaTimeout := 8 * time.Second
+	if raw := strings.TrimSpace(os.Getenv("OLLAMA_TIMEOUT_MS")); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed < 250 || parsed > 30000 {
+			return nil, fmt.Errorf("FATAL: OLLAMA_TIMEOUT_MS must be an integer between 250 and 30000")
+		}
+		ollamaTimeout = time.Duration(parsed) * time.Millisecond
+	}
+
 	return &Config{
-		HttpPort:           port,
-		Env:                env,
-		DatabaseUrl:        dbUrl,
-		RedisUrl:           redisUrl,
-		JwtSecret:          jwtSecret,
-		JwtPrivateKeyRS256: jwtPrivate,
-		JwtPublicKeyRS256:  jwtPublic,
-		JwtIssuer:          "sentinelpulse-auth",
-		StreamName:         "sentinelpulse:telemetry",
-		ConsumerGroup:      "sentinelpulse:persistence",
-		ConsumerName:       "worker-1",
-		MaxPayloadBytes:    1024 * 1024,
-		MSIArtifactDir:     artifactDir,
-		MSIBuilderKey:      os.Getenv("MSI_BUILDER_KEY"),
-		SigningCertPfxPath:  os.Getenv("SIGNING_CERT_PFX_PATH"),
-		SigningCertPassword: os.Getenv("SIGNING_CERT_PASSWORD"),
+		HttpPort:             port,
+		Env:                  env,
+		DatabaseUrl:          dbUrl,
+		RedisUrl:             redisUrl,
+		JwtSecret:            jwtSecret,
+		JwtPrivateKeyRS256:   jwtPrivate,
+		JwtPublicKeyRS256:    jwtPublic,
+		JwtIssuer:            "sentinelpulse-auth",
+		StreamName:           "sentinelpulse:telemetry",
+		ConsumerGroup:        "sentinelpulse:persistence",
+		ConsumerName:         "worker-1",
+		MaxPayloadBytes:      1024 * 1024,
+		MSIArtifactDir:       artifactDir,
+		MSIBuilderKey:        os.Getenv("MSI_BUILDER_KEY"),
+		SigningCertPfxPath:   os.Getenv("SIGNING_CERT_PFX_PATH"),
+		SigningCertPassword:  os.Getenv("SIGNING_CERT_PASSWORD"),
+		ProcessRetentionDays: processRetentionDays,
+		LLMProvider:          llmProvider,
+		OllamaBaseURL:        os.Getenv("OLLAMA_BASE_URL"),
+		OllamaModel:          os.Getenv("OLLAMA_MODEL"),
+		OllamaTimeout:        ollamaTimeout,
 	}, nil
 }
