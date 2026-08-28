@@ -3,7 +3,8 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { Router } from 'wouter';
 import { describe, expect, it, vi } from 'vitest';
-import EndpointDetail, { endpointLifecyclePresentation } from './EndpointDetail';
+import EndpointDetail from './EndpointDetail';
+import { endpointLifecyclePresentation } from '../lib/endpointLifecyclePresentation';
 import type { Endpoint } from '@/types';
 
 class ResizeObserverStub {
