@@ -117,7 +117,10 @@ func (w *Worker) ProcessMessage(ctx context.Context, msg redis.XMessage) error {
 	// Update only the endpoint belonging to the authenticated tenant.
 	result, err := tx.ExecContext(ctx, `
 		UPDATE endpoints
-		SET status = 'online', last_seen = $3
+		SET status = 'online',
+		    status_reason = 'Authenticated telemetry evidence received',
+		    status_changed_at = CASE WHEN status IS DISTINCT FROM 'online' THEN $3 ELSE status_changed_at END,
+		    last_seen = $3
 		WHERE id = $1 AND tenant_id = $2
 	`, env.EndpointID, env.TenantID, capturedAt.UTC())
 	if err != nil {
