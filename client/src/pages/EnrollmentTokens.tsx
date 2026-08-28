@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
 import { EnrollmentToken, MSIBuilderStatus, MSIBuildJob, MSISignMode } from '../types';
+
+export const getMSIBuildStatusLabel = (job: MSIBuildJob) => {
+  if (job.status === 'pending') return 'queued';
+  if (job.status === 'running') return 'building';
+  if (job.status === 'succeeded') return job.isSigned && job.certificateTrusted ? 'trusted-signed' : 'unsigned-test';
+  return 'failed';
+};
 import { KeyRound, Plus, Copy, Check, ShieldCheck, Download, Hammer, AlertTriangle, Loader2, BadgeCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -138,12 +145,7 @@ export default function EnrollmentTokens({ tokens, onCreateToken, canWrite, acce
   };
 
   const trustedReady = Boolean(builderStatus?.available && builderStatus.certificateTrusted);
-  const buildStatusLabel = (job: MSIBuildJob) => {
-    if (job.status === 'pending') return 'queued';
-    if (job.status === 'running') return 'building';
-    if (job.status === 'succeeded') return job.isSigned && job.certificateTrusted ? 'trusted-signed' : 'unsigned-test';
-    return 'failed';
-  };
+  const buildStatusLabel = (job: MSIBuildJob) => getMSIBuildStatusLabel(job);
   const testReady = Boolean(builderStatus?.available);
 
   return (
