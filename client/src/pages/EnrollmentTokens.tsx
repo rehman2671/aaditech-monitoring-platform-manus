@@ -144,7 +144,7 @@ export default function EnrollmentTokens({ tokens, onCreateToken, canWrite, acce
             className="bg-blue-600 hover:bg-blue-500 text-white font-semibold gap-2 shadow-lg shadow-blue-900/20"
           >
             {isQueueingBuild ? <Loader2 className="w-4 h-4 animate-spin" /> : <Hammer className="w-4 h-4" />}
-            Build, Sign & Enroll
+            Compile MSI
           </Button>
           <Button
             disabled={!canWrite || !accessToken}
@@ -153,7 +153,7 @@ export default function EnrollmentTokens({ tokens, onCreateToken, canWrite, acce
             className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold gap-2 shadow-lg shadow-emerald-900/20"
           >
             <Download className="w-4 h-4" />
-            Download MSI
+            Download generated MSI
           </Button>
           <Button
             disabled={!canWrite}
